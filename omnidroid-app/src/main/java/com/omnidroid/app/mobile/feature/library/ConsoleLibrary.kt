@@ -607,6 +607,8 @@ private fun ConsoleLandscapeCard(
         if (game == null) return@Box
         OmnidroidGameImage(
             modifier = Modifier.renderAtSize(renderWidth, renderHeight),
+            // The card's banner shows the title.
+            contentDescription = null,
             game = game,
             aspectRatio = null,
             // Decode at the selected card's size, not the 160dp default (blurry when enlarged).
@@ -865,6 +867,8 @@ private fun ConsolePortraitCard(
             BoxWithConstraints(Modifier.fillMaxSize()) {
                 OmnidroidGameImage(
                     modifier = Modifier.fillMaxSize(),
+                    // The card's caption shows the title.
+                    contentDescription = null,
                     game = game,
                     aspectRatio = null,
                     // Decode at the card's real width, not the 160dp default (blurry on large cards).
