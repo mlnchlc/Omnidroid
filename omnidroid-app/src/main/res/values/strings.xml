@@ -204,7 +204,7 @@
     <string name="settings_description_hd_quality">Adjust the quality of HD mode</string>
 
     <string name="settings_title_immersive_mode">Dynamic background</string>
-    <string name="settings_description_immersive_mode">Colors the background from the game\'s visuals</string>
+    <string name="settings_description_immersive_mode">Colors the background from the game\'s visuals in game, in the game menu and on the Home view</string>
 
     <string name="settings_title_app_theme">Theme</string>
     <string name="settings_theme_dark">Dark</string>
@@ -553,6 +553,7 @@
     <string name="library_view_grid">Grid view</string>
     <string name="library_view_list">List view</string>
     <string name="library_view_console">Console view</string>
+    <string name="library_view_home">Home view</string>
     <string name="library_console_start">Start</string>
     <string name="library_play_random">Play random game</string>
     <string name="library_sort">Sort</string>
