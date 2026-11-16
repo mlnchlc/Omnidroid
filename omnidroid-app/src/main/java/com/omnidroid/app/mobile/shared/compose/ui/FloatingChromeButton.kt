@@ -15,7 +15,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -24,11 +23,12 @@ import com.omnidroid.app.mobile.shared.controller.controllerFocusGlow
 @Composable
 internal fun chromeButtonSize(): Dp {
     val spec = LocalAdaptiveLayout.current
-    val base = if (spec.isCompact) 32.dp else 36.dp
+    // 44 dp round buttons, close to Android's 48 dp touch-target guidance and easy to hit on a TV.
+    val base = if (spec.isUltraCompact) 40.dp else 44.dp
     return base * spec.uiScale
 }
 
-/** Borderless top bar icon button; it only shows a fill while pressed. */
+/** Round top bar icon button on the chrome panel colour, darker while pressed. */
 @Composable
 fun FloatingChromeButton(
     onClick: () -> Unit,
@@ -37,7 +37,7 @@ fun FloatingChromeButton(
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
     val background by animateColorAsState(
-        targetValue = if (pressed) chromeColors.pressed else Color.Transparent,
+        targetValue = if (pressed) chromeColors.pressed else chromeColors.panel,
         animationSpec = tween(120),
         label = "chromeButtonPressed",
     )
