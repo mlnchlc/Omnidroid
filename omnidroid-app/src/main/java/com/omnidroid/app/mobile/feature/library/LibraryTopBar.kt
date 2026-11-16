@@ -141,6 +141,7 @@ fun LibraryTopBar(
     onBackPressed: (() -> Unit)? = null,
 ) {
     val spec = LocalAdaptiveLayout.current
+    val chromeIconSize = 20.dp * spec.uiScale
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
     val controllerNav = LocalControllerNavigation.current
@@ -202,23 +203,18 @@ fun LibraryTopBar(
         )
     }
     val actions: @Composable () -> Unit = {
-        val iconSize = (if (portrait) 16.dp else 18.dp) * spec.uiScale
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (portrait) {
-                ProfileChromeButton(onClick = onProfilePressed, iconSize = iconSize)
+                ProfileChromeButton(onClick = onProfilePressed, iconSize = chromeIconSize)
                 Spacer(modifier = Modifier.width(6.dp))
             }
             LibraryUtilityButtons(
                 hasSecondaryOutput = hasSecondaryOutput,
-                iconSize = iconSize,
+                iconSize = chromeIconSize,
                 onRandomPressed = onRandomPressed,
                 onDisplaysPressed = onDisplaysPressed,
                 onSettingsPressed = onSettingsPressed,
             )
-            if (!portrait) {
-                Spacer(modifier = Modifier.width(8.dp))
-                ProfileChromeButton(onClick = onProfilePressed, iconSize = iconSize)
-            }
         }
     }
 
@@ -242,12 +238,16 @@ fun LibraryTopBar(
                 if (portrait) {
                     actions()
                 } else {
-                    LibrarySearchRow(
-                        expanded = searchExpanded,
-                        consoleTitleId = consoleTitleId,
-                        consoleGameCount = consoleGameCount,
-                        searchField = searchField,
-                    )
+                    // The logo leads the bar, as on console home screens, and opens Profile.
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        ProfileChromeButton(onClick = onProfilePressed, iconSize = chromeIconSize)
+                        LibrarySearchRow(
+                            expanded = searchExpanded,
+                            consoleTitleId = consoleTitleId,
+                            consoleGameCount = consoleGameCount,
+                            searchField = searchField,
+                        )
+                    }
                 }
             },
             trailingContent = if (portrait) null else actions,
@@ -272,7 +272,7 @@ private fun LibrarySearchRow(
         displayedTitleId = consoleTitleId
         displayedGameCount = consoleGameCount
     }
-    val startPadding = ((spec.sidebarWidth - spec.sidebarButtonSize) / 2 - 8.dp).coerceAtLeast(0.dp)
+    val startPadding = 10.dp
     BoxWithConstraints(modifier = Modifier.fillMaxWidth().padding(start = startPadding, end = 10.dp)) {
         val searchWidth by animateDpAsState(
             targetValue = if (expanded) maxWidth else spec.searchWidth.coerceAtMost(maxWidth),
@@ -302,7 +302,7 @@ private fun LibrarySearchRow(
     }
 }
 
-/** Settings, displays and play-random: borderless utility actions, unlike the dock's console circles. */
+/** Play random, displays and settings, as round chrome buttons. */
 @Composable
 private fun LibraryUtilityButtons(
     hasSecondaryOutput: Boolean,
@@ -313,12 +313,12 @@ private fun LibraryUtilityButtons(
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        FloatingChromeButton(onClick = onSettingsPressed) {
+        FloatingChromeButton(onClick = onRandomPressed) {
             Icon(
-                Icons.Outlined.Settings,
-                contentDescription = stringResource(R.string.settings),
+                imageVector = Icons.Outlined.Casino,
+                contentDescription = stringResource(R.string.library_play_random),
                 modifier = Modifier.size(iconSize),
             )
         }
@@ -330,10 +330,10 @@ private fun LibraryUtilityButtons(
                 modifier = Modifier.size(iconSize),
             )
         }
-        FloatingChromeButton(onClick = onRandomPressed) {
+        FloatingChromeButton(onClick = onSettingsPressed) {
             Icon(
-                imageVector = Icons.Outlined.Casino,
-                contentDescription = stringResource(R.string.library_play_random),
+                Icons.Outlined.Settings,
+                contentDescription = stringResource(R.string.settings),
                 modifier = Modifier.size(iconSize),
             )
         }
