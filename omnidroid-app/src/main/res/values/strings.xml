@@ -602,6 +602,8 @@
     <string name="library_view_list">List view</string>
     <string name="library_view_console">Console view</string>
     <string name="library_view_home">Home view</string>
+    <string name="library_view_row">Row view</string>
+    <string name="library_view_sidebar">Library with sidebar</string>
     <string name="library_console_start">Start</string>
     <string name="library_play_random">Play random game</string>
     <string name="library_sort">Sort</string>

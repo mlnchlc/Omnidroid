@@ -372,7 +372,7 @@ class MainActivity : RetrogradeComponentActivity(), BusyActivity {
                     .value
                     .any { it.getOmnidroidInputDevice() is OmnidroidInputDeviceGamePad }
 
-            val isGrid = libraryState.layout == LibraryLayout.GRID
+            val isGrid = libraryState.contentLayout == LibraryLayout.GRID
             val libraryHints =
                 ControllerHints.library(
                     switchConsoles = stringResource(R.string.controller_hint_switch_consoles),
@@ -406,7 +406,7 @@ class MainActivity : RetrogradeComponentActivity(), BusyActivity {
                     back = stringResource(R.string.controller_hint_back),
                 )
 
-            LaunchedEffect(currentRoute, selectedGameState.value, libraryState.layout) {
+            LaunchedEffect(currentRoute, selectedGameState.value, libraryState.contentLayout) {
                 controllerNav.setHints(
                     when {
                         selectedGameState.value != null -> simpleHints
