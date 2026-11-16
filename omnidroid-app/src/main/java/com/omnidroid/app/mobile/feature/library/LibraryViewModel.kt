@@ -227,6 +227,7 @@ class LibraryViewModel(
         return when (preferences.getString(LAYOUT_KEY, LibraryLayout.CONSOLE.name)) {
             LibraryLayout.LIST.name -> LibraryLayout.LIST
             LibraryLayout.GRID.name -> LibraryLayout.GRID
+            LibraryLayout.HOME.name -> LibraryLayout.HOME
             else -> LibraryLayout.CONSOLE
         }
     }
@@ -369,6 +370,7 @@ class LibraryViewModel(
 
 enum class LibraryLayout {
     CONSOLE,
+    HOME,
     GRID,
     LIST,
 }
