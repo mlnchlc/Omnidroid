@@ -33,6 +33,7 @@
     <string name="library_scanning">Scanning…</string>
     <string name="stop">Stop</string>
     <string name="none">None</string>
+    <string name="shortcut_not_set">Not set</string>
     <string name="directory">Directory</string>
     <string name="display_filter">Display filter</string>
     <string name="roms">ROMs</string>
@@ -514,7 +515,6 @@
     <string name="gamepad_binding_update_title">Associate \"RetroPad %1$s\"</string>
     <string name="gamepad_binding_update_description">Press a button on your \"%1$s\"</string>
     <string name="shortcut_binding_update_title">Associate \"Shortcut %1$s\"</string>
-    <string name="shortcut_not_set">Not set</string>
     <string name="shortcut_binding_update_description">Press a button on your \"%1$s\", or two buttons one after the other for a combo (hold them together in game)</string>
     <string name="shortcut_binding_conflict_message">%1$s is already the %2$s shortcut. Replace it?</string>
     <string name="gamepad_binding_clear">Clear</string>
