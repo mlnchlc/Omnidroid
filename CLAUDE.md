@@ -28,7 +28,7 @@ Android emulator frontend (Kotlin + Compose), a heavily extended Lemuroid fork. 
   APK with versionCode 3000 (below the split APK's 3003), which neither adb nor the phone's installer
   accepts as an update. Never start a shell command with a bare `cat > file` (it waits on stdin).
 - Install: when adb is connected, `adb -s <ip:port> install -r <arm64 apk>` and check for `Success`
-  (it can fail silently behind `tail`); also Taildrop the same APK.
+  (it can fail silently behind `tail`). Don't also Taildrop it when adb worked.
 - Unit tests: `./gradlew :omnidroid-app:testFreeDynamicDebugUnitTest` (JUnit only — no Robolectric
   or mocking libs; keep logic testable as pure functions, see `ScreenLayoutCycle`).
 - `ktlintCheck` currently crashes with an internal `HEADER_KEYWORD` error on every source set,
@@ -47,9 +47,9 @@ Android emulator frontend (Kotlin + Compose), a heavily extended Lemuroid fork. 
 
 ## Device testing
 - Phone: Galaxy S25 (`abhisheks-s25` on Tailscale, `100.83.100.60`).
-- After every successful build, send the arm64 APK without asking:
-  `tailscale file cp <apk> abhisheks-s25:` — works even when Tailscale lists the phone offline (it pulls
-  queued files when it reconnects), so never skip it.
+- After every successful build, put the arm64 APK on the phone without asking: `adb install -r` when
+  adb is reachable (and then no Taildrop); otherwise `tailscale file cp <apk> abhisheks-s25:`, which
+  works even when Tailscale lists the phone offline (it pulls queued files when it reconnects).
 - adb over Tailscale works once the user enables Wireless debugging and gives a pairing code:
   `adb pair 100.83.100.60:<pair-port> <code>` then `adb connect 100.83.100.60:<port>`.
   Ports change every time. With adb connected, `adb install -r <apk>` and logcat (game process is
