@@ -19,6 +19,13 @@ Android emulator frontend (Kotlin + Compose), a heavily extended Lemuroid fork. 
 - `./gradlew assembleFreeDynamicDebug` → `omnidroid-app/build/outputs/apk/freeDynamic/debug/`
   (`Omnidroid-dynamic-arm64-v8a-debug-v3.0.0.apk`; installs as `com.omnidroid.debug`, label
   "OmnidroidDebug", alongside the release app).
+- Build speed: Gradle build cache + configuration cache are on, so incremental builds take ~10-30 s
+  even across branch switches; run one Gradle invocation per check (tests + assemble together) and
+  filter tests with `--tests`. Don't use `-Pandroid.injected.build.abi=…`: it produces a test-only
+  APK with versionCode 3000 (below the split APK's 3003), which neither adb nor the phone's installer
+  accepts as an update. Never start a shell command with a bare `cat > file` (it waits on stdin).
+- Install: when adb is connected, `adb -s <ip:port> install -r <arm64 apk>` and check for `Success`
+  (it can fail silently behind `tail`); also Taildrop the same APK.
 - Unit tests: `./gradlew :omnidroid-app:testFreeDynamicDebugUnitTest` (JUnit only — no Robolectric
   or mocking libs; keep logic testable as pure functions, see `ScreenLayoutCycle`).
 - `ktlintCheck` currently crashes with an internal `HEADER_KEYWORD` error on every source set,
