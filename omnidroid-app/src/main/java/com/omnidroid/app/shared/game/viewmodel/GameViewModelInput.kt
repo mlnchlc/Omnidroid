@@ -292,9 +292,14 @@ class GameViewModelInput(
             .safeCollect { allShortcuts ->
                 allShortcuts.values
                     .firstNotNullOfOrNull { shortcuts ->
-                        shortcuts.firstOrNull { it.type == GameShortcutType.MENU }
+                        shortcuts.firstOrNull { it.type == GameShortcutType.MENU && it.isBound }
                     }
                     ?.let {
+                        // This collector restarts with the screen's lifecycle (rotation, returning
+                        // from the menu); this class lives in the ViewModel, so remember what was
+                        // already announced and only repeat it if the menu shortcut changes.
+                        if (it.name == announcedMenuShortcut) return@let
+                        announcedMenuShortcut = it.name
                         val message =
                             appContext.resources.getString(
                                 R.string.game_toast_settings_button_using_gamepad,
@@ -304,6 +309,8 @@ class GameViewModelInput(
                     }
             }
     }
+
+    private var announcedMenuShortcut: String? = null
 
     private suspend fun initializeGamePadKeysFlow() {
         val pressedKeys = mutableSetOf<Int>()
@@ -355,6 +362,11 @@ class GameViewModelInput(
                                 GameShortcutType.QUICK_LOAD -> sideEffects.loadQuickSave()
                                 GameShortcutType.QUICK_SAVE -> sideEffects.saveQuickSave()
                                 GameShortcutType.TOGGLE_FAST_FORWARD -> sideEffects.toggleFastForward()
+                                GameShortcutType.CYCLE_SCREEN_LAYOUT -> {
+                                    // Clear so holding the combo cycles once, not on every later key.
+                                    pressedKeys.clear()
+                                    sideEffects.cycleScreenLayout()
+                                }
                             }
                             return@safeCollect
                         }

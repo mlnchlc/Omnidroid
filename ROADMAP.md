@@ -6,6 +6,30 @@ Community requests, feature milestones, and bug reports from the community, orga
 
 ## Completed
 
+### v3.1.0
+
+- Switched on-screen controls to Omnidroid PadKit as a pinned in-repository submodule, making the same control-library sources available to clean checkouts and forks
+- Fixed stuck buttons and sticks when controls are removed, touch input is cancelled, or mappings change; simulated controls now update immediately and disabling tilt releases its input
+- Moved touch haptic intensity and feedback behavior into PadKit, with live vibration preferences, explicit mute, older-device fallbacks, and no background haptics dispatcher
+- Fixed analog-style D-pads to honor four-way/eight-way settings and dead zones immediately while held, while keeping smooth thumb movement
+- Made Omnidroid PadKit an Android-only library with standard source/test directories, built-in Kotlin support, and Android 7.0 / API 24 compatibility; removed unused desktop/iOS/browser targets, publishing machinery, hooks, and the bundled formatter executable
+- Optimized touch routing with indexed pointer capture, reusable buffers, cached bounds and input contributions, allocation-light event/haptic diffs, and analog thumb updates deferred to placement
+- Reduced face-button allocations by 65–68% while holding buttons, 37% while changing three-finger selections, and 29% in a mixed routing replay; these are warmed host allocation measurements, with workload details in the [PadKit README](https://github.com/Ahmed-Abousaif/Omnidroid-padkit/blob/da4a1c12a69eeb744217624c4ee7496b07a12700/README.md#performance-results)
+- Added reusable radial/grid button-layout geometry and fixed overlap hit priority, empty face-button layouts, invalid bounds, and non-finite geometry
+- Expanded input coverage to 114 PadKit tests plus five host tilt tests, including 24 explicit API 24 cases; added release AAR/lint/Android 7 compatibility gates and verified app release R8 processing
+- Redesigned the game launch loading screen with cover art, a compact rounded dark card, a green bar that repeatedly fills from left to right, and the console name before "Loading…"
+- Fixed the core-download progress bar briefly flashing on rotation when cores were already installed; genuine download progress now survives rotation, and finished background checks no longer clear progress from an active download
+- Made unbound gamepad shortcuts visible in Settings so Quick Save, Quick Load, and Toggle Fast Forward can be configured ([#40](https://github.com/Ahmed-Abousaif/Omnidroid/pull/40)) ([@mlnchlc](https://github.com/mlnchlc))
+- Added a four-state DS/3DS screen layout cycle (dual, swapped dual, top only, bottom only), a configurable gamepad shortcut, and preservation of swapped layouts across rotation ([#41](https://github.com/Ahmed-Abousaif/Omnidroid/pull/41)) ([@mlnchlc](https://github.com/mlnchlc))
+- Expanded DS/3DS single-screen layouts to fill the available landscape viewport, with PadKit routing individual fingers so unobstructed parts of the touchscreen remain usable while virtual buttons are held ([#42](https://github.com/Ahmed-Abousaif/Omnidroid/pull/42)) ([@mlnchlc](https://github.com/mlnchlc))
+- Removed the translucent panels behind DS/3DS landscape controls while retaining the portrait panel ([#43](https://github.com/Ahmed-Abousaif/Omnidroid/pull/43)) ([@mlnchlc](https://github.com/mlnchlc))
+- Fixed Vulkan garbage frames after layout or resolution changes in LibretroDroid 3.0.1 by rebinding image descriptors safely, handling geometry notifications natively, and applying related core options together between frames; updated the source pin and bundled AAR ([#44](https://github.com/Ahmed-Abousaif/Omnidroid/pull/44)) ([@mlnchlc](https://github.com/mlnchlc))
+- Prevented graphics backend changes from crashing or restarting an active game: the new backend applies on the next launch, with a notice, preserving the current session even when autosave is disabled or save states are unsupported ([#45](https://github.com/Ahmed-Abousaif/Omnidroid/pull/45)) ([@mlnchlc](https://github.com/mlnchlc))
+- Fixed clean builds using the bundled LibretroDroid AAR or its source checkout by resolving duplicate shared C++ runtime packaging and restoring required SoundTouch build templates ([#39](https://github.com/Ahmed-Abousaif/Omnidroid/pull/39), [#44](https://github.com/Ahmed-Abousaif/Omnidroid/pull/44)) ([@mlnchlc](https://github.com/mlnchlc))
+- Fixed controller navigation in game and library side menus ([#50](https://github.com/Ahmed-Abousaif/Omnidroid/pull/50)) ([@mlnchlc](https://github.com/mlnchlc))
+- Stopped gamepad shortcut hints repeating after rotation ([#51](https://github.com/Ahmed-Abousaif/Omnidroid/pull/51)) ([@mlnchlc](https://github.com/mlnchlc))
+- Restored Checkstyle CI builds ([#48](https://github.com/Ahmed-Abousaif/Omnidroid/pull/48)) ([@mlnchlc](https://github.com/mlnchlc))
+
 ### v3.0.0
 
 - Rebuilt extra-display detection and output for dual-screen handhelds and compatible TVs, with an Omnidroid welcome screen, per-display controls, safe lifecycle handling, and a lightweight single-screen path that starts the display coordinator only when needed

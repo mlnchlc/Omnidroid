@@ -44,6 +44,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.res.stringResource
@@ -86,6 +87,9 @@ fun SideMenuScaffold(
     BoxWithConstraints(modifier.fillMaxSize()) {
         Box(
             Modifier.fillMaxSize().background(Color.Black.copy(alpha = scrimAlpha))
+                // Tap outside to close, but never a controller focus target: as the first focusable
+                // node it could take focus from the menu rows, leaving the D-pad and A doing nothing.
+                .focusProperties { canFocus = false }
                 .clickable(remember { MutableInteractionSource() }, indication = null) { state.closeThen() },
         )
         AnimatedVisibility(
