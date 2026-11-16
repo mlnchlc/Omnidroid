@@ -880,23 +880,27 @@ private fun LibraryGames(
                             )
                         } else if (state.layout == LibraryLayout.HOME) {
                             val edges = homeEdges ?: HomeEdges(HomeEdgePadding, HomeEdgePadding)
-                            HomeLibrary(
-                                modifier = Modifier.fillMaxSize(),
-                                sharedTransitionScope = sharedTransitionScope,
-                                animatedVisibilityScope = animatedVisibilityScope,
-                                games = games,
-                                featured = featured,
-                                selection = consoleSelection,
-                                portrait = portrait,
-                                startPadding = edges.start,
-                                endPadding = edges.end,
-                                focusRequester = firstItemRequester,
-                                onOpenGame = onGameClick,
-                                onOpenContinueGame = onOpenContinueGame,
-                                onPlayGame = onContinueClick,
-                                onGameLongClick = onGameLongClick,
-                                onBackdropGameChange = onBackdropGameChange,
-                            )
+                            // A new dataset needs a new row, as for the paged layouts: the row's item
+                            // keys would otherwise be read against a shorter list mid-update.
+                            key(state.filter, state.searchQuery, state.sort) {
+                                HomeLibrary(
+                                    modifier = Modifier.fillMaxSize(),
+                                    sharedTransitionScope = sharedTransitionScope,
+                                    animatedVisibilityScope = animatedVisibilityScope,
+                                    games = games,
+                                    featured = featured,
+                                    selection = consoleSelection,
+                                    portrait = portrait,
+                                    startPadding = edges.start,
+                                    endPadding = edges.end,
+                                    focusRequester = firstItemRequester,
+                                    onOpenGame = onGameClick,
+                                    onOpenContinueGame = onOpenContinueGame,
+                                    onPlayGame = onContinueClick,
+                                    onGameLongClick = onGameLongClick,
+                                    onBackdropGameChange = onBackdropGameChange,
+                                )
+                            }
                         } else {
                             key(state.filter, state.searchQuery, state.sort) {
                                 LibraryPagedContent(

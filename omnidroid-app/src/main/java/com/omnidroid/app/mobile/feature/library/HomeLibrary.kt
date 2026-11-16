@@ -277,7 +277,12 @@ internal fun HomeLibrary(
                 horizontalArrangement = Arrangement.spacedBy(HomeCardGap),
                 verticalAlignment = Alignment.Top,
             ) {
-                items(count = count, key = items.key, contentType = items.contentType) { index ->
+                items(
+                    count = count,
+                    // Paging can shrink the list before this row recomposes with the new count.
+                    key = { index -> if (index < items.count) items.key(index) else "stale-$index" },
+                    contentType = { index -> if (index < items.count) items.contentType(index) else null },
+                ) { index ->
                     HomeRowCard(
                         game = items[index],
                         selected = index == selectedIndex,
