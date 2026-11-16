@@ -61,10 +61,15 @@ class LibraryViewModel(
         val syncProgress: SyncProgress? = null,
         val zoomDensity: Int = 0,
         val layout: LibraryLayout = LibraryLayout.CONSOLE,
+        val homeView: HomeView = HomeView.ROW,
         val sort: LibrarySort = LibrarySort.TITLE,
         val selectedSystemGameCount: Int? = null,
         val startupFilter: LibraryFilter = LibraryFilter.All,
-    )
+    ) {
+        /** What fills the games area: Home shows its own Row, Grid or List view. */
+        val contentLayout: LibraryLayout
+            get() = if (layout == LibraryLayout.HOME) homeView.contentLayout else layout
+    }
 
     private data class LibraryChrome(
         val operationInProgress: Boolean,
@@ -77,6 +82,7 @@ class LibraryViewModel(
     private data class LibraryPresentation(
         val zoomDensity: Int,
         val layout: LibraryLayout,
+        val homeView: HomeView,
         val sort: LibrarySort,
     )
 
@@ -87,11 +93,12 @@ class LibraryViewModel(
     private val scanRequested = MutableStateFlow(false)
     private val zoomDensityFlow = MutableStateFlow(readZoomDensity())
     private val layoutFlow = MutableStateFlow(readLayout())
+    private val homeViewFlow = MutableStateFlow(readHomeView())
     private val sortFlow = MutableStateFlow(readSort())
     private val syncProgressFlow = SyncProgressTracker.progress
     private val presentationFlow =
-        combine(zoomDensityFlow, layoutFlow, sortFlow) { zoom, layout, sort ->
-            LibraryPresentation(zoom, layout, sort)
+        combine(zoomDensityFlow, layoutFlow, homeViewFlow, sortFlow) { zoom, layout, homeView, sort ->
+            LibraryPresentation(zoom, layout, homeView, sort)
         }
     private val libraryOperationInProgress =
         PendingOperationsMonitor(appContext).anyLibraryOperationInProgress()
@@ -137,6 +144,7 @@ class LibraryViewModel(
                 syncProgress = if (chrome.operationInProgress) chrome.syncProgress else null,
                 zoomDensity = chrome.presentation.zoomDensity,
                 layout = chrome.presentation.layout,
+                homeView = chrome.presentation.homeView,
                 sort = chrome.presentation.sort,
                 selectedSystemGameCount = selectedCount,
                 startupFilter = chrome.startupFilter,
@@ -147,6 +155,7 @@ class LibraryViewModel(
             UiState(
                 zoomDensity = zoomDensityFlow.value,
                 layout = layoutFlow.value,
+                homeView = homeViewFlow.value,
                 sort = sortFlow.value,
                 filter = filterFlow.value,
                 startupFilter = startupStore.get(),
@@ -215,8 +224,31 @@ class LibraryViewModel(
     }
 
     fun setLayout(layout: LibraryLayout) {
+        val previous = layoutFlow.value
         layoutFlow.value = layout
-        preferences.edit().putString(LAYOUT_KEY, layout.name).apply()
+        preferences.edit().apply {
+            putString(LAYOUT_KEY, layout.name)
+            // Remembered so leaving Home returns to the layout the user had before.
+            if (layout == LibraryLayout.HOME && previous != LibraryLayout.HOME) {
+                putString(CLASSIC_LAYOUT_KEY, previous.name)
+            }
+        }.apply()
+    }
+
+    fun setHomeView(view: HomeView) {
+        homeViewFlow.value = view
+        preferences.edit().putString(HOME_VIEW_KEY, view.name).apply()
+    }
+
+    /** Back to the sidebar library, in the layout used before Home was chosen. */
+    fun leaveHome() {
+        val saved = preferences.getString(CLASSIC_LAYOUT_KEY, null)
+        setLayout(LibraryLayout.entries.firstOrNull { it.name == saved && it != LibraryLayout.HOME } ?: LibraryLayout.CONSOLE)
+    }
+
+    private fun readHomeView(): HomeView {
+        val saved = preferences.getString(HOME_VIEW_KEY, null)
+        return HomeView.entries.firstOrNull { it.name == saved } ?: HomeView.ROW
     }
 
     private fun readZoomDensity(): Int {
@@ -277,12 +309,12 @@ class LibraryViewModel(
         }
 
     fun zoomIn() {
-        if (layoutFlow.value != LibraryLayout.GRID) return
+        if (state.value.contentLayout != LibraryLayout.GRID) return
         setZoomDensity(zoomDensityFlow.value - 1)
     }
 
     fun zoomOut() {
-        if (layoutFlow.value != LibraryLayout.GRID) return
+        if (state.value.contentLayout != LibraryLayout.GRID) return
         setZoomDensity(zoomDensityFlow.value + 1)
     }
 
@@ -363,6 +395,8 @@ class LibraryViewModel(
     companion object {
         private const val ZOOM_DENSITY_KEY = "pref_library_zoom_density"
         private const val LAYOUT_KEY = "pref_library_layout"
+        private const val HOME_VIEW_KEY = "pref_library_home_view"
+        private const val CLASSIC_LAYOUT_KEY = "pref_library_classic_layout"
         private const val SORT_KEY = "pref_library_sort"
         const val MAX_ZOOM_DENSITY = 2
     }
@@ -373,6 +407,13 @@ enum class LibraryLayout {
     HOME,
     GRID,
     LIST,
+}
+
+/** The views Home offers, each shown with consoles along the bottom. */
+enum class HomeView(val contentLayout: LibraryLayout) {
+    ROW(LibraryLayout.HOME),
+    GRID(LibraryLayout.GRID),
+    LIST(LibraryLayout.LIST),
 }
 
 enum class LibrarySort(val order: GameOrder) {

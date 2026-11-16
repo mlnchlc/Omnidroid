@@ -58,6 +58,8 @@ import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.ViewCarousel
+import androidx.compose.material.icons.outlined.ViewSidebar
+import androidx.compose.material.icons.outlined.ViewWeek
 import androidx.compose.material.icons.outlined.ZoomIn
 import androidx.compose.material.icons.outlined.ZoomOut
 import androidx.compose.material3.CircularProgressIndicator
@@ -296,9 +298,10 @@ fun LibraryScreen(
                     startPadding = edges.start,
                     endPadding = edges.end,
                     trailing = {
-                        LibraryLayoutToggle(
-                            layout = state.layout,
-                            onLayoutChange = { viewModel.setLayout(it) },
+                        HomeViewToggle(
+                            view = state.homeView,
+                            onViewChange = { viewModel.setHomeView(it) },
+                            onLeaveHome = { viewModel.leaveHome() },
                             modifier = Modifier.padding(start = 8.dp),
                         )
                     },
@@ -789,7 +792,7 @@ private fun LibraryGames(
         state.filter is LibraryFilter.All &&
             state.searchQuery.isBlank() &&
             continueGame != null
-    LaunchedEffect(requestInitialFocus, games.itemCount, showContinue, state.layout) {
+    LaunchedEffect(requestInitialFocus, games.itemCount, showContinue, state.contentLayout) {
         if (requestInitialFocus && (games.itemCount > 0 || showContinue)) {
             runCatching { firstItemRequester.requestFocus() }
         }
@@ -812,7 +815,7 @@ private fun LibraryGames(
                     .weight(1f)
                     .fillMaxWidth()
                     .libraryPinchZoom(
-                        enabled = state.layout == LibraryLayout.GRID,
+                        enabled = state.contentLayout == LibraryLayout.GRID,
                         density = { currentZoomDensity },
                         onDensityChange = { currentOnZoomDensityChange(it) },
                         liveScale = pinchScale,
@@ -848,7 +851,7 @@ private fun LibraryGames(
                                 },
                     ) {
                         val featured = continueGame.takeIf { showContinue }
-                        if (state.layout == LibraryLayout.CONSOLE) {
+                        if (state.contentLayout == LibraryLayout.CONSOLE) {
                             ConsoleLibrary(
                                 modifier = Modifier.fillMaxSize(),
                                 sharedTransitionScope = sharedTransitionScope,
@@ -866,7 +869,7 @@ private fun LibraryGames(
                                 onFavoriteToggle = onFavoriteToggle,
                                 onBackdropGameChange = onBackdropGameChange,
                             )
-                        } else if (state.layout == LibraryLayout.HOME) {
+                        } else if (state.contentLayout == LibraryLayout.HOME) {
                             val edges = homeEdges ?: HomeEdges(HomeEdgePadding, HomeEdgePadding)
                             // A new dataset needs a new row, as for the paged layouts: the row's item
                             // keys would otherwise be read against a shorter list mid-update.
@@ -894,7 +897,7 @@ private fun LibraryGames(
                                 LibraryPagedContent(
                                     games = games,
                                     featured = featured,
-                                    layout = state.layout,
+                                    layout = state.contentLayout,
                                     zoomDensity = state.zoomDensity,
                                     portrait = portrait,
                                     sharedTransitionScope = sharedTransitionScope,
@@ -904,6 +907,8 @@ private fun LibraryGames(
                                     onContinueClick = onContinueClick,
                                     onGameLongClick = onGameLongClick,
                                     scrollState = pagedScrollState,
+                                    startPadding = homeEdges?.start,
+                                    endPadding = homeEdges?.end,
                                 )
                             }
                         }
@@ -916,7 +921,7 @@ private fun LibraryGames(
                 layout = state.layout,
                 density = state.zoomDensity,
                 portrait = portrait,
-                showZoom = showZoomBar && state.layout == LibraryLayout.GRID,
+                showZoom = showZoomBar && state.contentLayout == LibraryLayout.GRID,
                 onLayoutChange = onLayoutChange,
                 onDensityChange = onZoomDensityChange,
                 modifier = Modifier,
@@ -1076,6 +1081,70 @@ internal fun LibraryLayoutToggle(
             icon = Icons.AutoMirrored.Outlined.ViewList,
             contentDescription = stringResource(R.string.library_view_list),
             onClick = { onLayoutChange(LibraryLayout.LIST) },
+            boxSize = 24.dp * scale,
+            iconSize = 16.dp * scale,
+        )
+    }
+}
+
+/**
+ * Home's own view switch: Row, Grid and List all keep the consoles along the bottom. The first
+ * button goes back to the library with the sidebar, in the layout used before Home.
+ */
+@Composable
+internal fun HomeViewToggle(
+    view: HomeView,
+    onViewChange: (HomeView) -> Unit,
+    onLeaveHome: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val scale = LocalAdaptiveLayout.current.uiScale
+    Row(
+        modifier =
+            modifier
+                .height(28.dp * scale)
+                .background(chromeColors.panel, CircleShape)
+                .border(BorderStroke(1.dp, chromeColors.panelBorder), CircleShape)
+                .padding(2.dp * scale),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        LayoutToggleIcon(
+            selected = false,
+            icon = Icons.Outlined.ViewSidebar,
+            contentDescription = stringResource(R.string.library_view_sidebar),
+            onClick = onLeaveHome,
+            boxSize = 24.dp * scale,
+            iconSize = 16.dp * scale,
+        )
+        Box(
+            modifier =
+                Modifier
+                    .padding(horizontal = 2.dp)
+                    .width(1.dp)
+                    .height(16.dp * scale)
+                    .background(chromeColors.divider),
+        )
+        LayoutToggleIcon(
+            selected = view == HomeView.ROW,
+            icon = Icons.Outlined.ViewWeek,
+            contentDescription = stringResource(R.string.library_view_row),
+            onClick = { onViewChange(HomeView.ROW) },
+            boxSize = 24.dp * scale,
+            iconSize = 16.dp * scale,
+        )
+        LayoutToggleIcon(
+            selected = view == HomeView.GRID,
+            icon = Icons.Filled.GridView,
+            contentDescription = stringResource(R.string.library_view_grid),
+            onClick = { onViewChange(HomeView.GRID) },
+            boxSize = 24.dp * scale,
+            iconSize = 16.dp * scale,
+        )
+        LayoutToggleIcon(
+            selected = view == HomeView.LIST,
+            icon = Icons.AutoMirrored.Outlined.ViewList,
+            contentDescription = stringResource(R.string.library_view_list),
+            onClick = { onViewChange(HomeView.LIST) },
             boxSize = 24.dp * scale,
             iconSize = 16.dp * scale,
         )

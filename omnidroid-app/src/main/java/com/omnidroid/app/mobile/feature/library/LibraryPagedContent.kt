@@ -72,6 +72,8 @@ internal fun LibraryPagedContent(
     onGameLongClick: (Game) -> Unit,
     modifier: Modifier = Modifier,
     scrollState: LibraryPagedScrollState = rememberLibraryPagedScrollState(),
+    startPadding: Dp? = null,
+    endPadding: Dp? = null,
 ) {
     val items = remember(games, featured) { LibraryPagedItems(games, featured) }
     // Kept independently when changing modes; reset by the parent's dataset key on search/filter/sort.
@@ -129,7 +131,12 @@ internal fun LibraryPagedContent(
                 onGameLongClick = onGameLongClick,
             )
         }
-        val padding = PaddingValues(horizontal = horizontalPadding, vertical = verticalPadding)
+        val padding = PaddingValues(
+            start = startPadding ?: horizontalPadding,
+            end = endPadding ?: horizontalPadding,
+            top = verticalPadding,
+            bottom = verticalPadding,
+        )
         val arrangement = Arrangement.spacedBy(spacing)
         if (vertical) {
             LazyVerticalGrid(
