@@ -1120,7 +1120,7 @@ private fun Modifier.consoleActionFade(
     }.padding(ConsoleActionShadowPadding)
 
 @Composable
-private fun ConsoleActions(
+internal fun ConsoleActions(
     label: String,
     showControllerGlyph: Boolean,
     modifier: Modifier = Modifier,

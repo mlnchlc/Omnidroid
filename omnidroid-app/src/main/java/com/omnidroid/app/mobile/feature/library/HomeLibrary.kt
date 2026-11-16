@@ -20,6 +20,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.gestures.ScrollableDefaults
+import androidx.compose.foundation.gestures.snapping.SnapPosition
+import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -34,6 +37,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
@@ -51,6 +55,8 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
+import com.omnidroid.R
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -65,10 +71,18 @@ import com.omnidroid.app.mobile.shared.compose.ui.chromeColors
 import com.omnidroid.app.mobile.shared.controller.LocalControllerNavigation
 import com.omnidroid.lib.library.db.entity.Game
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.filter
+import kotlin.math.abs
 import kotlin.math.floor
 import kotlin.math.roundToInt
 
 private val HomeHeaderHeight = 30.dp
+
+/** Portrait puts a larger title above the row and the game's actions below it. */
+private val HomePortraitHeaderHeight = 64.dp
+private val HomePortraitActionsGap = 20.dp
+private val HomePortraitActionsHeight = 40.dp + HomePortraitActionsGap
 private val HomeCardGap = 14.dp
 private val HomeRingWidth = 3.dp
 private val HomeRingOutset = 3.dp
@@ -95,9 +109,14 @@ internal data class HomeRowMetrics(
     val smallHeight: Dp,
 ) {
     companion object {
-        fun from(availableWidth: Dp, availableHeight: Dp, portrait: Boolean): HomeRowMetrics {
+        fun from(
+            availableWidth: Dp,
+            availableHeight: Dp,
+            portrait: Boolean,
+            reservedHeight: Dp = HomeHeaderHeight,
+        ): HomeRowMetrics {
             val maxWidth = availableWidth * if (portrait) 0.6f else 0.4f
-            val rowHeight = availableHeight - HomeHeaderHeight - HomeRingSpace * 2
+            val rowHeight = availableHeight - reservedHeight - HomeRingSpace * 2
             val height = min(rowHeight, maxWidth / LibraryGameCardAspectRatio).coerceAtLeast(96.dp)
             val width = height * LibraryGameCardAspectRatio
             return HomeRowMetrics(
@@ -161,7 +180,9 @@ internal fun HomeLibrary(
     onOpenContinueGame: (Game) -> Unit,
     onPlayGame: (Game) -> Unit,
     onGameLongClick: (Game) -> Unit,
+    onFavoriteToggle: (Game, Boolean) -> Unit,
     onBackdropGameChange: (Game?) -> Unit,
+    showControllerGlyph: Boolean = false,
 ) {
     val items = remember(games, featured) { LibraryPagedItems(games, featured) }
     val count = items.count
@@ -226,12 +247,23 @@ internal fun HomeLibrary(
                 }
                 .focusable(),
     ) {
-        val metrics = HomeRowMetrics.from(maxWidth - startPadding - endPadding, maxHeight, portrait)
+        val reserved = if (portrait) HomePortraitHeaderHeight + HomePortraitActionsHeight else HomeHeaderHeight
+        val metrics = HomeRowMetrics.from(maxWidth - startPadding - endPadding, maxHeight, portrait, reserved)
         val listState = rememberLazyListState()
         val density = LocalDensity.current
         val viewportWidth = maxWidth - startPadding - endPadding
+        // Portrait centres the selected card, with its neighbours peeking in at both edges.
+        val centredPadding =
+            ((maxWidth - metrics.selectedWidth - HomeRingSpace * 2) / 2).coerceAtLeast(startPadding)
+        val rowStart = if (portrait) centredPadding else startPadding
+        val rowEnd = if (portrait) centredPadding else endPadding
 
-        LaunchedEffect(selectedIndex, metrics, viewportWidth) {
+        LaunchedEffect(selectedIndex, metrics, viewportWidth, portrait) {
+            // Every card before the selected one is small, so it starts at its own index.
+            if (portrait) {
+                runCatching { listState.animateScrollToItem(selectedIndex) }
+                return@LaunchedEffect
+            }
             with(density) {
                 val ring = HomeRingSpace.toPx() * 2
                 val gap = HomeCardGap.toPx()
@@ -255,25 +287,61 @@ internal fun HomeLibrary(
             }
         }
 
+        if (portrait) {
+            val currentSelect by rememberUpdatedState(select)
+            // A swipe settles on the card nearest the centre, which becomes the selection.
+            LaunchedEffect(listState) {
+                snapshotFlow { listState.isScrollInProgress }
+                    .drop(1)
+                    .filter { !it }
+                    .collect {
+                        val layout = listState.layoutInfo
+                        val centre = (layout.viewportStartOffset + layout.viewportEndOffset) / 2
+                        val nearest =
+                            layout.visibleItemsInfo.minByOrNull { abs(it.offset + it.size / 2 - centre) }
+                                ?: return@collect
+                        if (nearest.index != selection.intValue) currentSelect(nearest.index)
+                    }
+            }
+        }
+
         Column(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = if (portrait) Arrangement.Center else Arrangement.Top,
         ) {
-            HomeSelectionHeader(
-                game = selectedGame,
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .height(HomeHeaderHeight)
-                        .padding(start = startPadding + HomeRingSpace, end = endPadding),
-            )
+            if (portrait) {
+                HomePortraitHeader(
+                    game = selectedGame,
+                    continueGame = items.isFeatured(selectedIndex),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .height(HomePortraitHeaderHeight)
+                            .padding(horizontal = startPadding),
+                )
+            } else {
+                HomeSelectionHeader(
+                    game = selectedGame,
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .height(HomeHeaderHeight)
+                            .padding(start = startPadding + HomeRingSpace, end = endPadding),
+                )
+            }
             LazyRow(
                 state = listState,
                 modifier =
                     Modifier
                         .fillMaxWidth()
                         .height(metrics.selectedHeight + HomeRingSpace * 2),
-                contentPadding = PaddingValues(start = startPadding, end = endPadding),
+                flingBehavior =
+                    if (portrait) {
+                        rememberSnapFlingBehavior(listState, SnapPosition.Center)
+                    } else {
+                        ScrollableDefaults.flingBehavior()
+                    },
+                contentPadding = PaddingValues(start = rowStart, end = rowEnd),
                 horizontalArrangement = Arrangement.spacedBy(HomeCardGap),
                 verticalAlignment = Alignment.Top,
             ) {
@@ -295,7 +363,52 @@ internal fun HomeLibrary(
                     )
                 }
             }
+            if (portrait) {
+                Spacer(modifier = Modifier.height(HomePortraitActionsGap))
+                ConsoleActions(
+                    label =
+                        stringResource(
+                            if (items.isFeatured(selectedIndex)) R.string.continue_playing else R.string.library_console_start,
+                        ),
+                    showControllerGlyph = showControllerGlyph,
+                    modifier = Modifier.align(Alignment.CenterHorizontally),
+                    game = selectedGame,
+                    onPlay = { items.peek(selectedIndex)?.let(onPlayGame) },
+                    onFavoriteToggle = onFavoriteToggle,
+                    onSettings = { items.peek(selectedIndex)?.let(onGameLongClick) },
+                )
+            }
         }
+    }
+}
+
+@Composable
+private fun HomePortraitHeader(
+    game: Game?,
+    continueGame: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.Bottom,
+    ) {
+        if (game == null) return@Column
+        if (continueGame) {
+            Text(
+                text = stringResource(R.string.continue_playing),
+                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                color = chromeColors.muted,
+                maxLines = 1,
+            )
+        }
+        Text(
+            text = game.displayName,
+            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+            color = LibraryNeonGreen,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        LibraryGameSubtext(game = game, modifier = Modifier.padding(top = 2.dp, bottom = 8.dp))
     }
 }
 
