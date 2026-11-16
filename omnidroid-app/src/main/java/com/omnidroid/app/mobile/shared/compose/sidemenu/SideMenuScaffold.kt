@@ -11,6 +11,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -46,6 +47,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -67,6 +69,8 @@ fun SideMenuScaffold(
     modifier: Modifier = Modifier,
     bottomReserved: Dp = 0.dp,
     onClosed: () -> Unit = {},
+    /** Drawn over the scrim, in the space beside the panel (for example a save preview). */
+    beside: (@Composable BoxScope.() -> Unit)? = null,
     content: @Composable () -> Unit,
 ) {
     val closed by rememberUpdatedState(onClosed)
@@ -92,6 +96,17 @@ fun SideMenuScaffold(
                 .focusProperties { canFocus = false }
                 .clickable(remember { MutableInteractionSource() }, indication = null) { state.closeThen() },
         )
+        if (beside != null) {
+            Box(
+                modifier =
+                    Modifier
+                        .align(Alignment.CenterStart)
+                        .fillMaxHeight()
+                        .width(maxWidth - sideMenuWidth(maxWidth.value).dp)
+                        .graphicsLayer { alpha = (scrimAlpha / 0.58f).coerceIn(0f, 1f) },
+                content = beside,
+            )
+        }
         AnimatedVisibility(
             visibleState = transition,
             modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),

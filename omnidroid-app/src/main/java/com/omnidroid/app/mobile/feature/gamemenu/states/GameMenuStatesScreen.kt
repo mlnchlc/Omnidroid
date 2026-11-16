@@ -1,15 +1,18 @@
 package com.omnidroid.app.mobile.feature.gamemenu.states
 
+import android.graphics.Bitmap
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
@@ -32,7 +35,7 @@ enum class StatesMenuMode {
 }
 
 /** A slot click waiting for confirmation; [slot] is null for the autosave. */
-private data class PendingSlot(val slot: Int?, val title: String, val description: String)
+private data class PendingSlot(val slot: Int?, val title: String, val description: String, val preview: Bitmap? = null)
 
 @Composable
 fun GameMenuStatesScreen(
@@ -46,6 +49,10 @@ fun GameMenuStatesScreen(
     var pending by remember { mutableStateOf<PendingSlot?>(null) }
     val autoSaveTitle = stringResource(R.string.game_menu_autosave)
     val askToConfirm = confirmGameMenuActionsEnabled()
+    val slotPreview = LocalSlotPreview.current
+    DisposableEffect(slotPreview) {
+        onDispose { slotPreview?.bitmap = null }
+    }
 
     pending?.let { target ->
         val isLoad = mode == StatesMenuMode.LOAD
@@ -62,6 +69,7 @@ fun GameMenuStatesScreen(
                 } else {
                     stringResource(R.string.game_menu_save_overwrite_message, target.description)
                 },
+            preview = target.preview,
             onDismiss = { pending = null },
         ) {
             pending = null
@@ -85,6 +93,7 @@ fun GameMenuStatesScreen(
                     titleRes = R.string.game_menu_autosave,
                     subtitle = { Text(autoSave.description) },
                     enabled = autoSave.enabled,
+                    modifier = Modifier.onFocusChanged { if (it.isFocused) slotPreview?.bitmap = null },
                 ) {
                     if (askToConfirm) pending = PendingSlot(null, autoSaveTitle, autoSave.description) else onAutoSaveClicked()
                 }
@@ -97,6 +106,7 @@ fun GameMenuStatesScreen(
                     title = { Text(entry.title) },
                     subtitle = { Text(entry.description) },
                     enabled = entry.enabled,
+                    modifier = Modifier.onFocusChanged { if (it.isFocused) slotPreview?.bitmap = entry.preview },
                     icon = {
                         val preview = entry.preview
                         if (preview != null) {
@@ -114,7 +124,7 @@ fun GameMenuStatesScreen(
                 ) {
                     val needsConfirm = askToConfirm && (mode == StatesMenuMode.LOAD || entry.exists)
                     if (needsConfirm) {
-                        pending = PendingSlot(entry.slot, entry.title, entry.description)
+                        pending = PendingSlot(entry.slot, entry.title, entry.description, entry.preview)
                     } else {
                         onStateClicked(entry.slot)
                     }
@@ -126,6 +136,7 @@ fun GameMenuStatesScreen(
                 "new-slot",
                 titleRes = R.string.game_menu_save_new,
                 subtitle = { Text(stringResource(R.string.game_menu_save_new_description)) },
+                modifier = Modifier.onFocusChanged { if (it.isFocused) slotPreview?.bitmap = null },
                 onClick = onNewStateClicked,
             )
         }

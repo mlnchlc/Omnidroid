@@ -1,6 +1,7 @@
 package com.omnidroid.app.mobile.feature.gamemenu
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Sensors
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.collectAsState
@@ -31,6 +32,7 @@ fun GameMenuHomeScreen(
     gameMenuRequest: GameMenuRequest,
     onCommand: (InGameMenuCommand) -> Unit,
     saveSyncSupported: Boolean = false,
+    onResume: () -> Unit = {},
 ) {
     val request = gameMenuRequest
     var audioEnabled by remember(request.audioEnabled) { mutableStateOf(request.audioEnabled) }
@@ -51,6 +53,10 @@ fun GameMenuHomeScreen(
     val hasControls = request.editTouchControlsSupported || saveSyncSupported || hasSettings || request.allTiltConfigurations.isNotEmpty()
     SideMenuPage("game-home") {
         MenuSection("commands") {
+            // First, so A on opening the menu by mistake goes straight back to the game.
+            MenuAction("resume", titleRes = R.string.game_menu_resume, icon = { Icon(Icons.Filled.PlayArrow, contentDescription = null) }) {
+                onResume()
+            }
             if (request.coreConfig.statesSupported) {
                 MenuAction("save", titleRes = R.string.game_menu_save, icon = { MenuDrawableIcon(R.drawable.ic_menu_save) }) {
                     navController.navigateToRoute(GameMenuRoute.SAVE)

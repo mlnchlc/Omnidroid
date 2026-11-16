@@ -38,6 +38,9 @@ import com.omnidroid.R
 import com.omnidroid.app.mobile.feature.gamemenu.coreoptions.GameMenuCoreOptionsScreen
 import com.omnidroid.app.mobile.feature.gamemenu.coreoptions.GameMenuCoreOptionsViewModel
 import com.omnidroid.app.mobile.feature.gamemenu.states.GameMenuStatesScreen
+import com.omnidroid.app.mobile.feature.gamemenu.states.LocalSlotPreview
+import com.omnidroid.app.mobile.feature.gamemenu.states.SlotPreviewBeside
+import com.omnidroid.app.mobile.feature.gamemenu.states.SlotPreviewState
 import com.omnidroid.app.mobile.feature.gamemenu.states.StatesMenuMode
 import com.omnidroid.app.mobile.feature.gamemenu.states.GameMenuStatesViewModel
 import com.omnidroid.app.mobile.shared.compose.ui.AppTheme
@@ -146,6 +149,7 @@ class GameMenuActivity : RetrogradeComponentActivity() {
             val navController = rememberNavController()
             val controllerNav = remember { ControllerNavigationState() }
             val menu = rememberSideMenuState()
+            val slotPreview = remember { SlotPreviewState() }
             var pendingCommand by remember { mutableStateOf<InGameMenuCommand?>(null) }
             val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
                 ?.let { GameMenuRoute.findByRoute(it) } ?: GameMenuRoute.HOME
@@ -168,7 +172,10 @@ class GameMenuActivity : RetrogradeComponentActivity() {
                 }
                 controllerNav.setHints(hints)
             }
-            CompositionLocalProvider(LocalControllerNavigation provides controllerNav) {
+            CompositionLocalProvider(
+                LocalControllerNavigation provides controllerNav,
+                LocalSlotPreview provides slotPreview,
+            ) {
                 Box(Modifier.fillMaxSize()) {
                     SideMenuScaffold(
                         state = menu,
@@ -177,6 +184,7 @@ class GameMenuActivity : RetrogradeComponentActivity() {
                         onBack = { navController.popBackStack() },
                         bottomReserved = if (gamepadConnected) ControllerHintBarRowHeight else 0.dp,
                         onClosed = { onResult { pendingCommand?.writeTo(this) } },
+                        beside = { SlotPreviewBeside(slotPreview) },
                     ) {
                         SideMenuNavHost(navController, GameMenuRoute.HOME.route) {
                             composable(GameMenuRoute.HOME) {
@@ -185,6 +193,8 @@ class GameMenuActivity : RetrogradeComponentActivity() {
                                     gameMenuRequest,
                                     onCommand = { requestClose(it) },
                                     saveSyncSupported = saveSyncManager.isSupported(),
+                                    // Closing with no command returns to the game unchanged.
+                                    onResume = { if (menu.transition.targetState) menu.closeThen() },
                                 )
                             }
                             composable(GameMenuRoute.SAVE) {
