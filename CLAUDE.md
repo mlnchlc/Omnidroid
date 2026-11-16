@@ -45,7 +45,8 @@ Android emulator frontend (Kotlin + Compose), a heavily extended Lemuroid fork. 
 ## Device testing
 - Phone: Galaxy S25 (`abhisheks-s25` on Tailscale, `100.83.100.60`).
 - After every successful build, send the arm64 APK without asking:
-  `tailscale file cp <apk> abhisheks-s25:` (check `tailscale status` first; say so if offline).
+  `tailscale file cp <apk> abhisheks-s25:` — works even when Tailscale lists the phone offline (it pulls
+  queued files when it reconnects), so never skip it.
 - adb over Tailscale works once the user enables Wireless debugging and gives a pairing code:
   `adb pair 100.83.100.60:<pair-port> <code>` then `adb connect 100.83.100.60:<port>`.
   Ports change every time. With adb connected, `adb install -r <apk>` and logcat (game process is
