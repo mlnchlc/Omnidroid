@@ -771,6 +771,9 @@ android {
 
 
             versionNameSuffix = "-DEBUG"
+            // -Pomnidroid.fastDebug: same app id and data, but without the debuggable flag, which
+            // slows Compose a lot (useful for judging scroll smoothness against release).
+            if (project.hasProperty("omnidroid.fastDebug")) isDebuggable = false
 
 
 

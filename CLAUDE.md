@@ -19,6 +19,9 @@ Android emulator frontend (Kotlin + Compose), a heavily extended Lemuroid fork. 
 - `./gradlew assembleFreeDynamicDebug` → `omnidroid-app/build/outputs/apk/freeDynamic/debug/`
   (`Omnidroid-dynamic-arm64-v8a-debug-v3.0.0.apk`; installs as `com.omnidroid.debug`, label
   "OmnidroidDebug", alongside the release app).
+- Builds for the phone: add `-Pomnidroid.fastDebug` (drops the debuggable flag). A debuggable build
+  runs Compose far slower: library flings measured 19 slow UI frames / 24 ms p99 vs 0 / 9 ms without
+  the flag, identical to the release app. Judge smoothness only on a fastDebug build.
 - Build speed: Gradle build cache + configuration cache are on, so incremental builds take ~10-30 s
   even across branch switches; run one Gradle invocation per check (tests + assemble together) and
   filter tests with `--tests`. Don't use `-Pandroid.injected.build.abi=…`: it produces a test-only
