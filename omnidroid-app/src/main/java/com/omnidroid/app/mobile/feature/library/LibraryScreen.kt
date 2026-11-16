@@ -901,7 +901,9 @@ private fun LibraryGames(
                                     onOpenContinueGame = onOpenContinueGame,
                                     onPlayGame = onContinueClick,
                                     onGameLongClick = onGameLongClick,
+                                    onFavoriteToggle = onFavoriteToggle,
                                     onBackdropGameChange = onBackdropGameChange,
+                                    showControllerGlyph = requestInitialFocus,
                                 )
                             }
                         } else {
