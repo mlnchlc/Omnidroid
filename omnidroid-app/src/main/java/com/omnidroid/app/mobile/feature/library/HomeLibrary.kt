@@ -23,6 +23,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.gestures.ScrollableDefaults
 import androidx.compose.foundation.gestures.snapping.SnapPosition
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
+import androidx.compose.foundation.lazy.LazyListItemInfo
+import androidx.compose.foundation.lazy.LazyListLayoutInfo
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -71,8 +74,6 @@ import com.omnidroid.app.mobile.shared.compose.ui.chromeColors
 import com.omnidroid.app.mobile.shared.controller.LocalControllerNavigation
 import com.omnidroid.lib.library.db.entity.Game
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.drop
-import kotlinx.coroutines.flow.filter
 import kotlin.math.abs
 import kotlin.math.floor
 import kotlin.math.roundToInt
@@ -258,11 +259,17 @@ internal fun HomeLibrary(
         val rowStart = if (portrait) centredPadding else startPadding
         val rowEnd = if (portrait) centredPadding else endPadding
 
-        LaunchedEffect(selectedIndex, metrics, viewportWidth, portrait) {
+        /** Scrolls so the selected card sits on its spot: centred in portrait, in view otherwise. */
+        suspend fun alignSelection(animate: Boolean) {
+            suspend fun scrollTo(index: Int, offset: Int = 0) {
+                runCatching {
+                    if (animate) listState.animateScrollToItem(index, offset) else listState.scrollToItem(index, offset)
+                }
+            }
             // Every card before the selected one is small, so it starts at its own index.
             if (portrait) {
-                runCatching { listState.animateScrollToItem(selectedIndex) }
-                return@LaunchedEffect
+                if (!animate && selectedIsCentred(listState, selectedIndex)) return
+                return scrollTo(selectedIndex)
             }
             with(density) {
                 val ring = HomeRingSpace.toPx() * 2
@@ -280,28 +287,41 @@ internal fun HomeLibrary(
                         selectedWidth = metrics.selectedWidth.toPx() + ring,
                         gap = gap,
                         viewport = viewportWidth.toPx(),
-                    ) ?: return@LaunchedEffect
+                    ) ?: return
                 val targetIndex = floor(target / step).toInt().coerceIn(0, lastIndex)
-                val offset = (target - targetIndex * step).roundToInt()
-                runCatching { listState.animateScrollToItem(targetIndex, offset) }
+                scrollTo(targetIndex, (target - targetIndex * step).roundToInt())
             }
         }
 
+        LaunchedEffect(selectedIndex, metrics, viewportWidth, portrait) { alignSelection(animate = true) }
+
         if (portrait) {
             val currentSelect by rememberUpdatedState(select)
-            // A swipe settles on the card nearest the centre, which becomes the selection.
+            val align: suspend (Boolean) -> Unit = { alignSelection(it) }
+            val currentAlign by rememberUpdatedState(align)
             LaunchedEffect(listState) {
-                snapshotFlow { listState.isScrollInProgress }
-                    .drop(1)
-                    .filter { !it }
-                    .collect {
+                var wasScrolling = false
+                snapshotFlow {
+                    Triple(listState.isScrollInProgress, listState.firstVisibleItemIndex, listState.firstVisibleItemScrollOffset)
+                }.collect { (scrolling, _, _) ->
+                    val settled = wasScrolling && !scrolling
+                    wasScrolling = scrolling
+                    if (scrolling) return@collect
+                    if (settled) {
+                        // A swipe settles on the card nearest the centre, which becomes the selection.
                         val layout = listState.layoutInfo
-                        val centre = (layout.viewportStartOffset + layout.viewportEndOffset) / 2
                         val nearest =
-                            layout.visibleItemsInfo.minByOrNull { abs(it.offset + it.size / 2 - centre) }
+                            layout.visibleItemsInfo.minByOrNull { abs(it.centre() - layout.centre()) }
                                 ?: return@collect
-                        if (nearest.index != selection.intValue) currentSelect(nearest.index)
+                        if (nearest.index != selection.intValue) {
+                            currentSelect(nearest.index)
+                            return@collect
+                        }
                     }
+                    // The row moved without a scroll (paging keeps its place by item key while
+                    // games load), or settled slightly off: put the selected card back in the centre.
+                    currentAlign(false)
+                }
             }
         }
 
@@ -380,6 +400,16 @@ internal fun HomeLibrary(
             }
         }
     }
+}
+
+private fun LazyListItemInfo.centre(): Int = offset + size / 2
+
+private fun LazyListLayoutInfo.centre(): Int = (viewportStartOffset + viewportEndOffset) / 2
+
+private fun selectedIsCentred(state: LazyListState, index: Int): Boolean {
+    val layout = state.layoutInfo
+    val item = layout.visibleItemsInfo.firstOrNull { it.index == index } ?: return false
+    return abs(item.centre() - layout.centre()) <= 2
 }
 
 @Composable
