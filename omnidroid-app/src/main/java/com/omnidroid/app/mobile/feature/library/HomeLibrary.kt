@@ -80,7 +80,7 @@ import kotlin.math.roundToInt
 private val HomeHeaderHeight = 30.dp
 
 /** Portrait puts a larger title above the row and the game's actions below it. */
-private val HomePortraitHeaderHeight = 64.dp
+private val HomePortraitHeaderHeight = 88.dp
 private val HomePortraitActionsGap = 20.dp
 private val HomePortraitActionsHeight = 40.dp + HomePortraitActionsGap
 private val HomeCardGap = 14.dp
