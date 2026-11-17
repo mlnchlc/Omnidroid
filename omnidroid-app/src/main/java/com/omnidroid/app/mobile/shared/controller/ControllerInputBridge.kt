@@ -147,7 +147,7 @@ class ControllerInputBridge {
                 SystemClock.uptimeMillis(),
             )
         if (press != null) dispatchPress(press, event.deviceId, event.source, dispatch)
-        scheduleReverseCheck(event.deviceId, event.source, dispatch)
+        scheduleStickTick(event.deviceId, event.source, dispatch)
         return true
     }
 
@@ -162,27 +162,28 @@ class ControllerInputBridge {
         dispatchDirectional(press.x, press.y, KeyEvent.ACTION_UP, now, deviceId, source, dispatch)
     }
 
-    private var reverseCheck: Runnable? = null
+    private var stickTick: Runnable? = null
 
     /**
-     * A possible reverse waits to see if it stays out ([StickPressFilter.tick]); a stick held still
-     * sends no events, so check again once the wait is over.
+     * A held stick or a waiting reverse needs time to pass, but a stick held still sends no events:
+     * keep ticking the filter until it has nothing left to do.
      */
-    private fun scheduleReverseCheck(
+    private fun scheduleStickTick(
         deviceId: Int,
         source: Int,
         dispatch: (KeyEvent) -> Boolean,
     ) {
-        reverseCheck?.let(shoulderHandler::removeCallbacks)
-        reverseCheck = null
-        if (!stick.pending) return
-        val check =
+        stickTick?.let(shoulderHandler::removeCallbacks)
+        stickTick = null
+        val delay = stick.nextTickIn(SystemClock.uptimeMillis()) ?: return
+        val tick =
             Runnable {
-                reverseCheck = null
+                stickTick = null
                 stick.tick(SystemClock.uptimeMillis())?.let { dispatchPress(it, deviceId, source, dispatch) }
+                scheduleStickTick(deviceId, source, dispatch)
             }
-        reverseCheck = check
-        shoulderHandler.postDelayed(check, stick.reverseConfirmMs + 5)
+        stickTick = tick
+        shoulderHandler.postDelayed(tick, delay)
     }
 
     private val shoulderHandler = Handler(Looper.getMainLooper())
@@ -306,8 +307,8 @@ class ControllerInputBridge {
     companion object {
         private const val HAT_DEADZONE = 0.5f
         private const val STICK_DEADZONE = 0.6f
-        private const val SHOULDER_HOLD_MS = 450L
-        private const val SHOULDER_REPEAT_MS = 220L
+        private const val SHOULDER_HOLD_MS = 350L
+        private const val SHOULDER_REPEAT_MS = 140L
         private const val SHOULDER_MAX_HOLD_MS = 10_000L
         private const val ZOOM_COOLDOWN_MS = 280L
     }

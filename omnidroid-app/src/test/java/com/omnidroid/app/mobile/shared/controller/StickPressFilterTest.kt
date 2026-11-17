@@ -122,7 +122,21 @@ class StickPressFilterTest {
     fun `holding repeats only after the hold delay`() {
         val filter = StickPressFilter()
         val result = presses(filter, (0..50).map { Triple(1f, 0f, it * 20L) })
-        // First press at 0 ms, then repeats from 560 ms every >= 180 ms up to 1000 ms: 560, 740, 920.
-        assertEquals(4, result.size)
+        // First press at 0 ms, then from 400 ms every >= 110 ms up to 1000 ms: 400, 520, 640, 760, 880, 1000.
+        assertEquals(7, result.size)
+    }
+
+    @Test
+    fun `a stick held still repeats through tick`() {
+        val filter = StickPressFilter()
+        assertEquals(StickPressFilter.Press(0, 1), filter.update(0f, 1f, 0L))
+        assertEquals(400L, filter.nextTickIn(0L))
+        assertNull(filter.tick(399L))
+        assertEquals(StickPressFilter.Press(0, 1), filter.tick(400L))
+        assertEquals(110L, filter.nextTickIn(400L))
+        assertEquals(StickPressFilter.Press(0, 1), filter.tick(510L))
+        // Let go: nothing more to tick.
+        assertNull(filter.update(0f, 0f, 520L))
+        assertNull(filter.nextTickIn(520L))
     }
 }
