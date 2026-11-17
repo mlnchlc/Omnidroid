@@ -1,5 +1,8 @@
 package com.omnidroid.app.mobile.feature.settings.general
 
+import androidx.compose.runtime.CompositionLocalProvider
+import com.omnidroid.app.utils.android.settings.LocalSettingsGroupsAsCards
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Box
@@ -104,6 +107,7 @@ fun SettingsScreen(
     }
 
     val content: @Composable (Modifier) -> Unit = { paneModifier ->
+        CompositionLocalProvider(LocalSettingsGroupsAsCards provides true) {
         SettingsContentPane(
             section = section,
             activeSubscreen = activeSubscreen,
@@ -125,6 +129,7 @@ fun SettingsScreen(
             availableConsoles = availableConsoles,
             modifier = paneModifier,
         )
+        }
     }
 
     BoxWithConstraints(

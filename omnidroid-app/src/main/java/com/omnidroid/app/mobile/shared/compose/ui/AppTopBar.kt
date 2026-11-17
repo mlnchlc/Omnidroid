@@ -28,6 +28,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -59,6 +62,8 @@ fun AppTopBar(
     trailingContent: (@Composable () -> Unit)? = null,
     bottomContent: (@Composable () -> Unit)? = null,
     showStatus: Boolean = true,
+    /** Page title shown beside the Back button, e.g. "Settings". */
+    title: String? = null,
 ) {
     val spec = LocalAdaptiveLayout.current
     val height by animateDpAsState(
@@ -102,12 +107,23 @@ fun AppTopBar(
                             enter = fadeIn(tween(200)),
                             exit = fadeOut(tween(200)),
                         ) {
-                            FloatingChromeButton(onClick = { onBackPressed?.invoke() }) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                    contentDescription = stringResource(R.string.back),
-                                    modifier = Modifier.size(18.dp * spec.uiScale),
-                                )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                FloatingChromeButton(onClick = { onBackPressed?.invoke() }) {
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                        contentDescription = stringResource(R.string.back),
+                                        modifier = Modifier.size(18.dp * spec.uiScale),
+                                    )
+                                }
+                                if (title != null) {
+                                    Text(
+                                        text = title,
+                                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                                        color = chromeContentColor,
+                                        maxLines = 1,
+                                        modifier = Modifier.padding(start = 12.dp),
+                                    )
+                                }
                             }
                         }
                     }

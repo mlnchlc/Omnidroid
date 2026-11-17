@@ -1,5 +1,19 @@
 package com.omnidroid.app.utils.android.settings
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -42,6 +56,12 @@ import kotlin.math.roundToInt
 
 /** Optional host surface for rows; null uses the app's default settings colors. */
 val LocalSettingsRowContainerColor = staticCompositionLocalOf<Color?> { null }
+
+/**
+ * When true (the Settings screen), each group is a rounded card under a small-caps title, and
+ * dividers between groups become spacing.
+ */
+val LocalSettingsGroupsAsCards = staticCompositionLocalOf { false }
 
 @Composable
 fun OmnidroidSettingsPage(
@@ -117,9 +137,38 @@ fun OmnidroidSettingsMenuLink(
 fun OmnidroidSettingsGroup(
     modifier: Modifier = Modifier,
     titleRes: Int? = null,
-    title: @Composable (() -> Unit)? = titleRes?.let { { Text(stringResource(it)) } },
+    title: @Composable (() -> Unit)? = titleRes?.let { { SettingsGroupTitleText(stringResource(it)) } },
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    if (LocalSettingsGroupsAsCards.current) {
+        Column(modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp)) {
+            if (title != null) {
+                Box(Modifier.padding(start = 4.dp, top = 8.dp, bottom = 6.dp)) {
+                    ProvideTextStyle(
+                        MaterialTheme.typography.labelMedium.copy(
+                            color = chromeColors.muted,
+                            fontWeight = FontWeight.SemiBold,
+                            letterSpacing = 0.8.sp,
+                        ),
+                    ) {
+                        CompositionLocalProvider(LocalSettingsTitleUppercase provides true) { title() }
+                    }
+                }
+            }
+            val shape = RoundedCornerShape(12.dp)
+            Surface(
+                shape = shape,
+                color = chromeColors.panel,
+                border = BorderStroke(1.dp, chromeColors.panelBorder),
+                tonalElevation = 0.dp,
+            ) {
+                CompositionLocalProvider(LocalSettingsRowContainerColor provides chromeColors.panel) {
+                    Column(Modifier.fillMaxWidth().padding(vertical = 4.dp)) { content() }
+                }
+            }
+        }
+        return
+    }
     Surface(color = Color.Transparent, tonalElevation = 0.dp) {
         Column(
             modifier = modifier.fillMaxWidth(),
@@ -136,6 +185,10 @@ fun OmnidroidSettingsGroup(
 fun SettingsHorizontalDivider(
     modifier: Modifier = Modifier,
 ) {
+    if (LocalSettingsGroupsAsCards.current) {
+        Spacer(modifier.height(4.dp))
+        return
+    }
     Box(
         modifier =
             modifier
@@ -264,4 +317,76 @@ private fun omnidroidSettingsColor(enabled: Boolean): ListItemColors {
         trailingIconColor = defaultColors.disabledTrailingIconColor,
         supportingColor = defaultColors.supportingTextColor.copy(alpha = 0.3f),
     )
+}
+
+/** Lets a group title render in capitals without every caller changing its string. */
+val LocalSettingsTitleUppercase = staticCompositionLocalOf { false }
+
+/** Group title text that follows [LocalSettingsTitleUppercase]. */
+@Composable
+fun SettingsGroupTitleText(text: String) {
+    Text(if (LocalSettingsTitleUppercase.current) text.uppercase() else text)
+}
+
+/**
+ * A row with a segmented control on the right, for short choices (two to four options) where a
+ * dialog would be overkill. Each segment is focusable, so the D-pad moves between them.
+ */
+@Composable
+fun OmnidroidSettingsSegmented(
+    state: SettingValueState<Int>,
+    items: List<String>,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    titleRes: Int? = null,
+    title: @Composable () -> Unit = { Text(stringResource(requireNotNull(titleRes))) },
+    subtitleRes: Int? = null,
+    subtitle: (@Composable () -> Unit)? = subtitleRes?.let { { Text(stringResource(it)) } },
+) {
+    val container = settingsRowContainerColor() ?: Color.Transparent
+    Row(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .background(container)
+                .padding(horizontal = 16.dp, vertical = 10.dp)
+                .alpha(if (enabled) 1f else 0.45f),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f).padding(end = 12.dp)) {
+            ProvideTextStyle(MaterialTheme.typography.bodyLarge.copy(color = chromeColors.content)) { title() }
+            if (subtitle != null) {
+                ProvideTextStyle(MaterialTheme.typography.bodySmall.copy(color = chromeColors.muted)) { subtitle() }
+            }
+        }
+        Row(
+            modifier =
+                Modifier
+                    .border(BorderStroke(1.dp, chromeColors.panelBorder), CircleShape)
+                    .padding(3.dp)
+                    .selectableGroup(),
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            items.forEachIndexed { index, label ->
+                val selected = index == state.value
+                Box(
+                    modifier =
+                        Modifier
+                            .height(32.dp)
+                            .controllerFocusGlow(CircleShape)
+                            .background(if (selected) chromeColors.content else Color.Transparent, CircleShape)
+                            .selectable(selected = selected, enabled = enabled, role = Role.RadioButton) { state.value = index }
+                            .padding(horizontal = 14.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        label,
+                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+                        color = if (selected) chromeColors.panel else chromeColors.content,
+                        maxLines = 1,
+                    )
+                }
+            }
+        }
+    }
 }
