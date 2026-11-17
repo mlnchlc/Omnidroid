@@ -184,6 +184,15 @@ private fun rememberPlayTimeMs(game: Game): Long {
     return maxOf(stats.totalDurationMs, stored)
 }
 
+/**
+ * Lets a controller reach the carousel's buttons: the carousel is one focusable that keeps
+ * left/right for moving between games, so Down hands focus to [actions] (the Start pill), and Up
+ * from the buttons returns to [carousel].
+ */
+internal class CarouselActionFocus(val actions: FocusRequester, val carousel: FocusRequester)
+
+internal val LocalCarouselActionFocus = staticCompositionLocalOf<CarouselActionFocus?> { null }
+
 /** Wide Continue / Start pill, then round favourite and more-options buttons. */
 @Composable
 internal fun HomeActions(
@@ -199,8 +208,9 @@ internal fun HomeActions(
     val height = if (compact) 38.dp else 52.dp
     // Paging only re-emits the game after the database write lands, so flip the heart immediately.
     var favorite by remember(game?.id, game?.isFavorite) { mutableStateOf(game?.isFavorite == true) }
+    val carouselFocus = LocalCarouselActionFocus.current
     Row(
-        modifier = modifier,
+        modifier = modifier.then(if (carouselFocus != null) Modifier.focusProperties { up = carouselFocus.carousel } else Modifier),
         horizontalArrangement = Arrangement.spacedBy(if (compact) 8.dp else 12.dp, if (compact) Alignment.Start else Alignment.CenterHorizontally),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -208,6 +218,7 @@ internal fun HomeActions(
             onClick = onPlay,
             modifier =
                 (if (compact) Modifier.widthIn(min = 132.dp) else Modifier.weight(1f).widthIn(max = 240.dp))
+                    .then(if (carouselFocus != null) Modifier.focusRequester(carouselFocus.actions) else Modifier)
                     .height(height)
                     .controllerFocusGlow(CircleShape),
             shape = CircleShape,

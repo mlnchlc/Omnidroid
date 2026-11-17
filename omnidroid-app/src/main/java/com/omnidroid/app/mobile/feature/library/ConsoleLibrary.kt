@@ -331,6 +331,12 @@ internal fun ConsoleLibrary(
         items.gameAt(state.selectedIndex)?.let(onPlayGame)
     }
 
+    // Home: Down moves from the carousel to its Start / favourite / more buttons.
+    val actionFocus = LocalCarouselActionFocus.current
+    val focusActions: () -> Boolean = {
+        actionFocus != null && runCatching { actionFocus.actions.requestFocus() }.isSuccess
+    }
+
     val adaptiveSpec = LocalAdaptiveLayout.current
     BoxWithConstraints(
         modifier =
@@ -341,7 +347,9 @@ internal fun ConsoleLibrary(
                     hasFocus = focusState.isFocused
                     if (!focusState.isFocused) navigation?.setFocusedGame(null)
                 }
-                .onKeyEvent { event -> handleCarouselKey(event, state, scope, playSelected) }
+                // Only while the carousel itself has focus: keys its buttons (children) don't use
+                // bubble up here, and must not move the carousel or pull focus back to Start.
+                .onKeyEvent { event -> hasFocus && handleCarouselKey(event, state, scope, playSelected, focusActions) }
                 .focusable(),
     ) {
         val carouselRatio = if (maxHeight > 0.dp) maxWidth / maxHeight else 1f
@@ -402,8 +410,10 @@ private fun handleCarouselKey(
     state: ConsoleCarouselState,
     scope: CoroutineScope,
     onConfirm: () -> Unit,
+    onDown: () -> Boolean,
 ): Boolean {
     return when (event.key) {
+        Key.DirectionDown -> event.type == KeyEventType.KeyDown && onDown()
         // At either end the key is left unconsumed so focus can move on to the console rail.
         Key.DirectionLeft -> {
             if (event.type != KeyEventType.KeyDown || state.targetIndex <= 0) return false

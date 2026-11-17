@@ -23,6 +23,9 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -98,6 +101,7 @@ import com.omnidroid.app.mobile.shared.compose.ui.cutoutTopInset
 import com.omnidroid.app.mobile.shared.compose.ui.calculateAdaptiveLayoutSpec
 import com.omnidroid.app.mobile.shared.compose.ui.homeChromeColor
 import com.omnidroid.app.mobile.shared.controller.ControllerHintBar
+import com.omnidroid.app.mobile.shared.controller.ControllerHintBarRowHeight
 import com.omnidroid.app.mobile.shared.controller.ControllerHints
 import com.omnidroid.app.mobile.shared.controller.ControllerInputBridge
 import com.omnidroid.app.mobile.shared.controller.ControllerNavigationState
@@ -550,11 +554,15 @@ class MainActivity : RetrogradeComponentActivity(), BusyActivity {
                 containerColor = homeChromeColor,
                 contentWindowInsets = WindowInsets(0, 0, 0, 0),
                 bottomBar = {
-                    if (gamepadConnected && controllerNav.modalNavigation == null) {
-                        ControllerHintBar(
-                            visible = true,
-                            hints = controllerNav.hints.value,
-                        )
+                    if (gamepadConnected) {
+                        // The space stays while a sheet shows its own hints over it, so the page
+                        // behind doesn't jump when the sheet opens and closes.
+                        Box(Modifier.fillMaxWidth().height(ControllerHintBarRowHeight)) {
+                            ControllerHintBar(
+                                visible = controllerNav.modalNavigation == null,
+                                hints = controllerNav.hints.value,
+                            )
+                        }
                     }
                 },
             ) { padding ->

@@ -1,11 +1,17 @@
 package com.omnidroid.app.mobile.feature.profile
 
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.FocusRequester
 import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import com.omnidroid.app.mobile.shared.controller.controllerFocusGlow
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -148,6 +154,8 @@ internal fun ProfileContent(
 ) {
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
     val listState = rememberLazyGridState()
+    // Controller route from the left column to the tabs (and from there down into the list).
+    val tabsRequester = remember { FocusRequester() }
     val scope = rememberCoroutineScope()
     val configuration = LocalConfiguration.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -179,7 +187,9 @@ internal fun ProfileContent(
         Row(Modifier.widthIn(max = 1200.dp).fillMaxSize()) {
             if (showProfileRail) {
                 Column(
-                    Modifier.width(240.dp).fillMaxHeight().verticalScroll(rememberScrollState())
+                    Modifier.width(240.dp).fillMaxHeight()
+                        .focusProperties { right = tabsRequester }
+                        .verticalScroll(rememberScrollState())
                         .padding(horizontal = 20.dp, vertical = 12.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
@@ -231,6 +241,9 @@ internal fun ProfileContent(
                                         scope.launch { listState.scrollToItem(tabIndex) }
                                     }
                                 },
+                                modifier =
+                                    (if (selectedTab == index) Modifier.focusRequester(tabsRequester) else Modifier)
+                                        .controllerFocusGlow(RoundedCornerShape(8.dp)),
                                 selectedContentColor = chromeContentColor,
                                 unselectedContentColor = chromeMutedContentColor,
                                 text = { Text(stringResource(label), fontWeight = FontWeight.SemiBold) },
@@ -396,7 +409,11 @@ private fun ProfileConsoleTile(achievement: ConsoleAchievement) {
     val status = stringResource(if (achievement.unlocked) R.string.profile_unlocked else R.string.profile_locked)
     Column(
         modifier =
-            Modifier.fillMaxWidth().heightIn(min = 92.dp).padding(horizontal = 4.dp, vertical = 8.dp)
+            // Focusable so a controller can move through the grid (and scroll it) to read each console.
+            Modifier.fillMaxWidth().heightIn(min = 92.dp)
+                .controllerFocusGlow(RoundedCornerShape(10.dp))
+                .focusable()
+                .padding(horizontal = 4.dp, vertical = 8.dp)
                 .semantics(mergeDescendants = true) { stateDescription = status },
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp),
