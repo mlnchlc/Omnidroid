@@ -714,7 +714,7 @@ private fun LandscapeInfoPanel(
             maxLines = if (compact || home) 1 else 2,
             active = true,
             modifier = Modifier.weight(1f, fill = false),
-            color = if (home) LibraryNeonGreen else chromeColors.content,
+            color = chromeColors.content,
         )
         if (home) {
             Text(
