@@ -1,5 +1,6 @@
 package com.omnidroid.app.mobile.feature.library
 
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.foundation.focusGroup
 import androidx.compose.ui.focus.FocusDirection
 import com.omnidroid.app.mobile.shared.compose.ui.accentColor
@@ -218,24 +219,28 @@ internal fun HomeActions(
     // Paging only re-emits the game after the database write lands, so flip the heart immediately.
     var favorite by remember(game?.id, game?.isFavorite) { mutableStateOf(game?.isFavorite == true) }
     val carouselFocus = LocalCarouselActionFocus.current
+    // 0 = Start, 1 = favourite, 2 = more: which button a controller is on.
+    var focusedButton by remember { mutableIntStateOf(-1) }
     Row(
         modifier =
             modifier.then(
                 if (carouselFocus != null) {
-                    // A controller stays in this row: Up and Left (from Start) go back to the
-                    // carousel; Right past the last button and Down go nowhere.
-                    Modifier
-                        .focusProperties {
-                            onExit = {
-                                when (requestedFocusDirection) {
-                                    FocusDirection.Up, FocusDirection.Left -> {
-                                        cancelFocusChange()
-                                        runCatching { carouselFocus.carousel.requestFocus() }
-                                    }
-                                    else -> cancelFocusChange()
-                                }
-                            }
-                        }.focusGroup()
+                    // A controller stays in this row: Up, and Left from Start, go back to the
+                    // carousel; Right past the last button and Down go nowhere (not the top bar).
+                    Modifier.onKeyEvent { event ->
+                        val down = event.type == KeyEventType.KeyDown
+                        fun toCarousel(): Boolean {
+                            if (down) runCatching { carouselFocus.carousel.requestFocus() }
+                            return true
+                        }
+                        when (event.key) {
+                            Key.DirectionUp -> toCarousel()
+                            Key.DirectionLeft -> if (focusedButton == 0) toCarousel() else false
+                            Key.DirectionRight -> focusedButton == 2
+                            Key.DirectionDown -> true
+                            else -> false
+                        }
+                    }
                 } else {
                     Modifier
                 },
@@ -248,6 +253,7 @@ internal fun HomeActions(
             modifier =
                 (if (compact) Modifier.widthIn(min = 132.dp) else Modifier.weight(1f).widthIn(max = 240.dp))
                     .then(if (carouselFocus != null) Modifier.focusRequester(carouselFocus.actions) else Modifier)
+                    .onFocusChanged { if (it.isFocused) focusedButton = 0 }
                     .height(height)
                     .controllerFocusGlow(CircleShape),
             shape = CircleShape,
@@ -271,6 +277,7 @@ internal fun HomeActions(
         }
         HomeRoundButton(
             size = height,
+            modifier = Modifier.onFocusChanged { if (it.isFocused) focusedButton = 1 },
             onClick = {
                 game?.let {
                     favorite = !favorite
@@ -287,7 +294,7 @@ internal fun HomeActions(
                 tint = if (favorite) accentColor else chromeColors.content,
             )
         }
-        HomeRoundButton(size = height, onClick = onMore) {
+        HomeRoundButton(size = height, modifier = Modifier.onFocusChanged { if (it.isFocused) focusedButton = 2 }, onClick = onMore) {
             Icon(WireframeIcons.More, contentDescription = stringResource(R.string.game_settings), tint = chromeColors.content)
         }
     }
@@ -297,11 +304,12 @@ internal fun HomeActions(
 private fun HomeRoundButton(
     size: Dp,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
     Surface(
         onClick = onClick,
-        modifier = Modifier.size(size).controllerFocusGlow(CircleShape),
+        modifier = modifier.size(size).controllerFocusGlow(CircleShape),
         shape = CircleShape,
         color = chromeColors.panel,
         border = BorderStroke(1.dp, chromeColors.panelBorder),
