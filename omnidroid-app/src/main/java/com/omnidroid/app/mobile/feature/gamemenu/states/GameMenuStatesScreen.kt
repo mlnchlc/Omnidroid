@@ -2,6 +2,7 @@ package com.omnidroid.app.mobile.feature.gamemenu.states
 
 import android.graphics.Bitmap
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -88,57 +89,73 @@ fun GameMenuStatesScreen(
         }
         state.value.autoSave?.let { autoSave ->
             MenuSection("autosave") {
-                MenuAction(
-                    "autosave",
-                    titleRes = R.string.game_menu_autosave,
-                    subtitle = { Text(autoSave.description) },
-                    enabled = autoSave.enabled,
-                    modifier = Modifier.onFocusChanged { if (it.isFocused) slotPreview?.bitmap = null },
-                ) {
-                    if (askToConfirm) pending = PendingSlot(null, autoSaveTitle, autoSave.description) else onAutoSaveClicked()
+                PreviewOnFocus(slotPreview, null) {
+                    MenuAction(
+                        "autosave",
+                        titleRes = R.string.game_menu_autosave,
+                        subtitle = { Text(autoSave.description) },
+                        enabled = autoSave.enabled,
+                    ) {
+                        if (askToConfirm) pending = PendingSlot(null, autoSaveTitle, autoSave.description) else onAutoSaveClicked()
+                    }
                 }
             }
         }
         MenuSection("slots", visible = state.value.entries.isNotEmpty()) {
             state.value.entries.forEach { entry ->
-                MenuAction(
-                    id = "slot-${entry.slot}",
-                    title = { Text(entry.title) },
-                    subtitle = { Text(entry.description) },
-                    enabled = entry.enabled,
-                    modifier = Modifier.onFocusChanged { if (it.isFocused) slotPreview?.bitmap = entry.preview },
-                    icon = {
-                        val preview = entry.preview
-                        if (preview != null) {
-                            Image(
-                                modifier = Modifier.size(48.dp),
-                                bitmap = preview.asImageBitmap(),
-                                contentScale = ContentScale.Crop,
-                                contentDescription = null,
-                            )
+                PreviewOnFocus(slotPreview, entry.preview) {
+                    MenuAction(
+                        id = "slot-${entry.slot}",
+                        title = { Text(entry.title) },
+                        subtitle = { Text(entry.description) },
+                        enabled = entry.enabled,
+                        icon = {
+                            val preview = entry.preview
+                            if (preview != null) {
+                                Image(
+                                    modifier = Modifier.size(48.dp),
+                                    bitmap = preview.asImageBitmap(),
+                                    contentScale = ContentScale.Crop,
+                                    contentDescription = null,
+                                )
+                            } else {
+                                // Keeps empty slots aligned with filled ones.
+                                MenuDrawableIcon(R.drawable.ic_menu_save)
+                            }
+                        },
+                    ) {
+                        val needsConfirm = askToConfirm && (mode == StatesMenuMode.LOAD || entry.exists)
+                        if (needsConfirm) {
+                            pending = PendingSlot(entry.slot, entry.title, entry.description, entry.preview)
                         } else {
-                            // Keeps empty slots aligned with filled ones.
-                            MenuDrawableIcon(R.drawable.ic_menu_save)
+                            onStateClicked(entry.slot)
                         }
-                    },
-                ) {
-                    val needsConfirm = askToConfirm && (mode == StatesMenuMode.LOAD || entry.exists)
-                    if (needsConfirm) {
-                        pending = PendingSlot(entry.slot, entry.title, entry.description, entry.preview)
-                    } else {
-                        onStateClicked(entry.slot)
                     }
                 }
             }
         }
         MenuSection("new-slot", visible = state.value.canAddSlot) {
-            MenuAction(
-                "new-slot",
-                titleRes = R.string.game_menu_save_new,
-                subtitle = { Text(stringResource(R.string.game_menu_save_new_description)) },
-                modifier = Modifier.onFocusChanged { if (it.isFocused) slotPreview?.bitmap = null },
-                onClick = onNewStateClicked,
-            )
+            PreviewOnFocus(slotPreview, null) {
+                MenuAction(
+                    "new-slot",
+                    titleRes = R.string.game_menu_save_new,
+                    subtitle = { Text(stringResource(R.string.game_menu_save_new_description)) },
+                    onClick = onNewStateClicked,
+                )
+            }
         }
     }
+}
+
+/**
+ * Shows [preview] beside the menu while the wrapped row has focus. The listener sits on a wrapper
+ * because the settings row applies its modifier inside its own clickable, out of focus's reach.
+ */
+@Composable
+private fun PreviewOnFocus(
+    state: SlotPreviewState?,
+    preview: Bitmap?,
+    content: @Composable () -> Unit,
+) {
+    Box(Modifier.onFocusChanged { if (it.hasFocus) state?.bitmap = preview }) { content() }
 }
