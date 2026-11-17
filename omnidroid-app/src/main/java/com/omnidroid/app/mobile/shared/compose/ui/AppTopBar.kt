@@ -37,6 +37,7 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -70,6 +71,10 @@ fun AppTopBar(
     // spacing as the content underneath so their edges line up.
     val topInset = cutoutTopInset()
     val edges = rememberContentEdges(contentEdge(portrait))
+    // On narrow landscape screens (small 4:3 handhelds) the read-outs would crowd search and
+    // the buttons, so they make way while the controls are up.
+    val statusFits = !controlsVisible || trailingContent == null || LocalConfiguration.current.screenWidthDp >= 560
+    val status = showStatus && statusFits
     val syncAlignment = if (portrait) Alignment.Top else Alignment.Bottom
     val syncOrigin = TransformOrigin(0.5f, if (portrait) 0f else 1f)
 
@@ -115,14 +120,14 @@ fun AppTopBar(
                             }
                         }
                     }
-                    if (showStatus) SystemStatusIndicators(gamepadConnected = gamepadConnected)
+                    if (status) SystemStatusIndicators(gamepadConnected = gamepadConnected)
                     AnimatedVisibility(
                         visible = controlsVisible && trailingContent != null,
                         enter = fadeIn(tween(200)) + expandHorizontally(tween(300, easing = FastOutSlowInEasing), expandFrom = Alignment.End),
                         exit = fadeOut(tween(200)) + shrinkHorizontally(tween(300, easing = FastOutSlowInEasing), shrinkTowards = Alignment.End),
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            if (showStatus) {
+                            if (status) {
                                 // Separates the status read-outs from the buttons.
                                 Spacer(modifier = Modifier.width(chromeItemGap()))
                                 Box(Modifier.width(1.dp).height(chromeButtonSize() * 0.55f).background(chromeColors.divider))
