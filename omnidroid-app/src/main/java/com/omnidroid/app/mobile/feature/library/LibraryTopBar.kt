@@ -246,6 +246,10 @@ fun LibraryTopBar(
                         ProfileChromeButton(onClick = onProfilePressed, iconSize = chromeIconSize)
                         Spacer(modifier = Modifier.width(8.dp))
                         searchField(Modifier.weight(1f))
+                        if (afterSearch != null && !searchExpanded) {
+                            Spacer(modifier = Modifier.width(8.dp))
+                            afterSearch()
+                        }
                     }
                 } else {
                     // The logo leads the bar, as on console home screens, and opens Profile.

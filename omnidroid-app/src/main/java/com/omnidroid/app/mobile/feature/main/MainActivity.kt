@@ -69,6 +69,7 @@ import com.omnidroid.app.mobile.feature.displays.DisplaysDialog
 import com.omnidroid.app.mobile.feature.gamedetails.GameDetailsScreen
 import com.omnidroid.app.mobile.feature.gamedetails.GameDetailsViewModel
 import com.omnidroid.app.mobile.feature.library.LibraryFilter
+import com.omnidroid.app.mobile.feature.library.HomeViewCycleButton
 import com.omnidroid.app.mobile.feature.library.HomeViewSwitch
 import com.omnidroid.app.mobile.feature.library.LibraryLayout
 import com.omnidroid.app.mobile.feature.library.LibraryScreen
@@ -862,12 +863,19 @@ class MainActivity : RetrogradeComponentActivity(), BusyActivity {
             if (currentRoute != MainRoute.SETTINGS_UI_SCALE) {
                 LibraryTopBar(
                     afterSearch =
-                        if (currentRoute == MainRoute.HOME && libraryState.layout == LibraryLayout.HOME && !portrait) {
+                        if (currentRoute == MainRoute.HOME && libraryState.layout == LibraryLayout.HOME) {
                             {
-                                HomeViewSwitch(
-                                    view = libraryState.homeView,
-                                    onViewChange = { libraryViewModel.setHomeView(it) },
-                                )
+                                if (portrait) {
+                                    HomeViewCycleButton(
+                                        view = libraryState.homeView,
+                                        onViewChange = { libraryViewModel.setHomeView(it) },
+                                    )
+                                } else {
+                                    HomeViewSwitch(
+                                        view = libraryState.homeView,
+                                        onViewChange = { libraryViewModel.setHomeView(it) },
+                                    )
+                                }
                             }
                         } else {
                             null
