@@ -287,24 +287,16 @@ fun LibraryScreen(
                     showViewBar = false,
                     homeEdges = edges,
                 )
-                PortraitConsoleBar(
+                HomeConsoleRow(
                     filter = state.filter,
                     systems = state.sidebarSystems,
                     selectedGameCount = state.selectedSystemGameCount,
                     startupFilter = state.startupFilter,
+                    portrait = portrait,
+                    edges = edges,
                     onFilterSelected = { viewModel.selectFilter(it) },
                     onConsoleLongClick = { startupTarget = it },
                     onAddConsole = onAddConsole,
-                    startPadding = edges.start,
-                    endPadding = edges.end,
-                    trailing = {
-                        HomeViewToggle(
-                            view = state.homeView,
-                            onViewChange = { viewModel.setHomeView(it) },
-                            onLeaveHome = { viewModel.leaveHome() },
-                            modifier = Modifier.padding(start = 8.dp),
-                        )
-                    },
                 )
             }
         } else if (portrait) {
@@ -521,7 +513,7 @@ private fun Modifier.dockEdgeFade(
         }
 
 @Composable
-private fun SidebarIconButton(
+internal fun SidebarIconButton(
     selected: Boolean,
     icon: ImageVector,
     contentDescription: String,
@@ -572,7 +564,7 @@ private fun BoxScope.StartupBadge(visible: Boolean) {
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun SidebarSystemLogoButton(
+internal fun SidebarSystemLogoButton(
     meta: MetaSystemID,
     selected: Boolean,
     onClick: () -> Unit,
@@ -630,6 +622,122 @@ private fun SidebarSystemLogoButton(
                 }
             }
             StartupBadge(visible = pinned)
+        }
+    }
+}
+
+/**
+ * Home's console row: Favorites, All and each console as round buttons with the selected
+ * filter's name beside them, centred in landscape. In portrait the name sits above the row.
+ */
+@Composable
+private fun HomeConsoleRow(
+    filter: LibraryFilter,
+    systems: List<MetaSystemID>,
+    selectedGameCount: Int?,
+    startupFilter: LibraryFilter,
+    portrait: Boolean,
+    edges: HomeEdges,
+    onFilterSelected: (LibraryFilter) -> Unit,
+    onConsoleLongClick: (MetaSystemID) -> Unit,
+    onAddConsole: () -> Unit,
+) {
+    val adaptiveSpec = LocalAdaptiveLayout.current
+    val listState = rememberLazyListState()
+    val label =
+        when (filter) {
+            is LibraryFilter.Favorites -> stringResource(R.string.favorites)
+            is LibraryFilter.System -> {
+                val title = stringResource(GameSystem.findById(filter.metaSystemID.systemIDs.first().dbname).shortTitleResId)
+                if (selectedGameCount != null) "$title · $selectedGameCount" else title
+            }
+            else -> stringResource(R.string.home_all_games)
+        }
+    val selectedSystemIndex = (filter as? LibraryFilter.System)?.let { systems.indexOf(it.metaSystemID) } ?: -1
+    LaunchedEffect(selectedSystemIndex, systems.size) {
+        // The list starts with Favorites, All and the divider.
+        if (selectedSystemIndex >= 0) runCatching { listState.animateScrollToItem(selectedSystemIndex + 3) }
+    }
+    val labelText: @Composable (Modifier) -> Unit = { modifier ->
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+            color = chromeColors.content,
+            maxLines = 1,
+            modifier = modifier,
+        )
+    }
+    val row: @Composable (Modifier) -> Unit = { modifier ->
+        LazyRow(
+            state = listState,
+            modifier =
+                modifier.dockEdgeFade(
+                    horizontal = true,
+                    fadeStart = { listState.canScrollBackward },
+                    fadeEnd = { listState.canScrollForward },
+                ),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            item(key = "favorites") {
+                SidebarIconButton(
+                    selected = filter is LibraryFilter.Favorites,
+                    icon = if (filter is LibraryFilter.Favorites) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                    contentDescription = stringResource(R.string.favorites),
+                    onClick = { onFilterSelected(LibraryFilter.Favorites) },
+                    pinned = startupFilter is LibraryFilter.Favorites,
+                )
+            }
+            item(key = "all") {
+                SidebarIconButton(
+                    selected = filter is LibraryFilter.All,
+                    icon = Icons.Filled.GridView,
+                    contentDescription = stringResource(R.string.show_all),
+                    onClick = { onFilterSelected(LibraryFilter.All) },
+                )
+            }
+            item(key = "divider") {
+                Box(Modifier.width(1.dp).height(28.dp * adaptiveSpec.uiScale).background(chromeColors.divider))
+            }
+            items(systems, key = { it.name }) { system ->
+                SidebarSystemLogoButton(
+                    meta = system,
+                    selected = (filter as? LibraryFilter.System)?.metaSystemID == system,
+                    pinned = startupFilter == LibraryFilter.System(system),
+                    onClick = { onFilterSelected(LibraryFilter.System(system)) },
+                    onLongClick = { onConsoleLongClick(system) },
+                )
+            }
+            item(key = "add_console") {
+                SidebarIconButton(
+                    selected = false,
+                    icon = Icons.Filled.Add,
+                    contentDescription = stringResource(R.string.title_add_console),
+                    onClick = onAddConsole,
+                )
+            }
+        }
+    }
+    if (portrait) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(start = edges.start, end = edges.end, bottom = 12.dp).focusGroup(),
+        ) {
+            labelText(Modifier.padding(bottom = 8.dp))
+            row(Modifier.fillMaxWidth())
+        }
+    } else {
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(adaptiveSpec.consoleBarHeight)
+                    .padding(start = edges.start, end = edges.end)
+                    .focusGroup(),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            row(Modifier.weight(1f, fill = false))
+            labelText(Modifier.padding(start = 16.dp))
         }
     }
 }

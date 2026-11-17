@@ -68,8 +68,9 @@ internal fun LibraryGameCardItem(
     decodeWidth: Dp,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
+    restingCorner: Dp = 4.dp,
 ) {
-    val cornerAnim by libraryCoverCorner(animatedVisibilityScope, game.id, 4.dp)
+    val cornerAnim by libraryCoverCorner(animatedVisibilityScope, game.id, restingCorner)
     val coverSharedModifier = Modifier.gameCoverSharedBounds(
         sharedTransitionScope, animatedVisibilityScope, game.id, cornerAnim,
         if (continueAction) GameCoverOrigin.Continue else GameCoverOrigin.Library,

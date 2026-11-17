@@ -94,6 +94,24 @@ class LibraryViewModel(
     private val zoomDensityFlow = MutableStateFlow(readZoomDensity())
     private val layoutFlow = MutableStateFlow(readLayout())
     private val homeViewFlow = MutableStateFlow(readHomeView())
+
+    // Settings › Display writes these keys too; follow them while the library stays alive.
+    private val layoutPreferenceListener =
+        android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            when (key) {
+                LAYOUT_KEY -> layoutFlow.value = readLayout()
+                HOME_VIEW_KEY -> homeViewFlow.value = readHomeView()
+            }
+        }
+
+    init {
+        preferences.registerOnSharedPreferenceChangeListener(layoutPreferenceListener)
+    }
+
+    override fun onCleared() {
+        preferences.unregisterOnSharedPreferenceChangeListener(layoutPreferenceListener)
+        super.onCleared()
+    }
     private val sortFlow = MutableStateFlow(readSort())
     private val syncProgressFlow = SyncProgressTracker.progress
     private val presentationFlow =
@@ -394,8 +412,8 @@ class LibraryViewModel(
 
     companion object {
         private const val ZOOM_DENSITY_KEY = "pref_library_zoom_density"
-        private const val LAYOUT_KEY = "pref_library_layout"
-        private const val HOME_VIEW_KEY = "pref_library_home_view"
+        const val LAYOUT_KEY = "pref_library_layout"
+        const val HOME_VIEW_KEY = "pref_library_home_view"
         private const val CLASSIC_LAYOUT_KEY = "pref_library_classic_layout"
         private const val SORT_KEY = "pref_library_sort"
         const val MAX_ZOOM_DENSITY = 2
