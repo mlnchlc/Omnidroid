@@ -14,6 +14,9 @@ import com.omnidroid.app.mobile.feature.main.navigateToRoute
 import com.omnidroid.app.shared.settings.rememberHdModeAllowed
 import com.omnidroid.app.utils.android.settings.OmnidroidSettingsGroup
 import com.omnidroid.app.utils.android.settings.OmnidroidSettingsList
+import com.omnidroid.app.mobile.feature.library.HomeView
+import com.omnidroid.app.mobile.feature.library.LibraryLayout
+import com.omnidroid.app.mobile.feature.library.LibraryViewModel
 import com.omnidroid.app.utils.android.settings.OmnidroidSettingsMenuLink
 import com.omnidroid.app.utils.android.settings.OmnidroidSettingsSlider
 import com.omnidroid.app.utils.android.settings.OmnidroidSettingsSwitch
@@ -41,7 +44,46 @@ internal fun DisplaySettings(navController: NavController) {
         }
     }
 
+    val libraryLayout =
+        indexPreferenceState(
+            LibraryViewModel.LAYOUT_KEY,
+            LibraryLayout.CONSOLE.name,
+            LibraryLayout.entries.map { it.name },
+        )
     OmnidroidSettingsGroup {
+        OmnidroidSettingsList(
+            state = libraryLayout,
+            titleRes = R.string.settings_title_library_layout,
+            subtitleRes = R.string.settings_description_library_layout,
+            items =
+                LibraryLayout.entries.map {
+                    stringResource(
+                        when (it) {
+                            LibraryLayout.CONSOLE -> R.string.library_view_console
+                            LibraryLayout.HOME -> R.string.library_view_home
+                            LibraryLayout.GRID -> R.string.library_view_grid
+                            LibraryLayout.LIST -> R.string.library_view_list
+                        },
+                    )
+                },
+        )
+        OmnidroidSettingsList(
+            enabled = LibraryLayout.entries.getOrNull(libraryLayout.value) == LibraryLayout.HOME,
+            state =
+                indexPreferenceState(
+                    LibraryViewModel.HOME_VIEW_KEY,
+                    HomeView.ROW.name,
+                    HomeView.entries.map { it.name },
+                ),
+            titleRes = R.string.settings_title_home_view,
+            subtitleRes = R.string.settings_description_home_view,
+            items =
+                listOf(
+                    stringResource(R.string.library_view_row),
+                    stringResource(R.string.library_view_grid),
+                    stringResource(R.string.library_view_list),
+                ),
+        )
         OmnidroidSettingsList(
             state =
                 indexPreferenceState(
