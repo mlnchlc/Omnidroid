@@ -110,6 +110,7 @@ import com.omnidroid.app.mobile.shared.compose.ui.AppTopBar
 import com.omnidroid.app.mobile.shared.compose.ui.FloatingChromeButton
 import com.omnidroid.app.mobile.shared.compose.ui.chromeButtonSize
 import com.omnidroid.app.mobile.shared.compose.ui.chromeIconSize
+import com.omnidroid.app.mobile.shared.compose.ui.chromeItemGap
 import com.omnidroid.app.mobile.shared.compose.ui.WireframeIcons
 import com.omnidroid.app.mobile.shared.compose.ui.LibraryNeonGreen
 import com.omnidroid.app.mobile.shared.compose.ui.LocalAdaptiveLayout
@@ -329,7 +330,7 @@ private fun LibraryUtilityButtons(
     Row(
         verticalAlignment = Alignment.CenterVertically,
         // Tighter in portrait, where search shares the row with four buttons.
-        horizontalArrangement = Arrangement.spacedBy(if (portrait) 6.dp else chromeButtonSize() * 0.27f),
+        horizontalArrangement = Arrangement.spacedBy(if (portrait) 6.dp else chromeItemGap()),
     ) {
         FloatingChromeButton(onClick = onRandomPressed) {
             Icon(

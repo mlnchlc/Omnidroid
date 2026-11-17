@@ -34,6 +34,10 @@ internal fun chromeButtonSize(): Dp {
     return base * spec.uiScale
 }
 
+/** One gap for everything on the right of the top bar: status items, the divider and buttons. */
+@Composable
+internal fun chromeItemGap(): Dp = chromeButtonSize() * 0.27f
+
 /** Icon size inside a [chromeButtonSize] button, keeping the wireframe's 20 / 44 ratio. */
 @Composable
 internal fun chromeIconSize(): Dp = chromeButtonSize() * 0.45f

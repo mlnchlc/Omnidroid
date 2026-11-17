@@ -124,9 +124,9 @@ fun AppTopBar(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             if (showStatus) {
                                 // Separates the status read-outs from the buttons.
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Box(Modifier.width(1.dp).height(24.dp).background(chromeColors.divider))
-                                Spacer(modifier = Modifier.width(12.dp))
+                                Spacer(modifier = Modifier.width(chromeItemGap()))
+                                Box(Modifier.width(1.dp).height(chromeButtonSize() * 0.55f).background(chromeColors.divider))
+                                Spacer(modifier = Modifier.width(chromeItemGap()))
                             } else {
                                 Spacer(modifier = Modifier.width(6.dp))
                             }
