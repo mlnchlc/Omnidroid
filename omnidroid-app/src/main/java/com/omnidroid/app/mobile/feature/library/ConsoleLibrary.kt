@@ -445,7 +445,8 @@ private class LandscapeMetrics(maxWidth: Dp, maxHeight: Dp, home: Boolean = fals
     val gap = 12.dp
     val bigHeight = (maxHeight - edge * 2).coerceIn(96.dp, 440.dp)
     val bigWidth = bigHeight * LibraryGameCardAspectRatio
-    val smallHeight = bigHeight * 0.55f
+    // Home's details (title, meta line, buttons) need a little more room above the small cards.
+    val smallHeight = bigHeight * (if (home) 0.48f else 0.55f)
     val smallWidth = smallHeight * LibraryGameCardAspectRatio
     val top = ((maxHeight - bigHeight) / 2).coerceAtLeast(0.dp)
     // Home lines the selected card up with the top bar and console row (leaving room for its ring);
@@ -705,7 +706,7 @@ private fun LandscapeInfoPanel(
             text = game.displayName,
             style =
                 when {
-                    home -> MaterialTheme.typography.titleLarge.copy(fontSize = HomeTitleSize, fontWeight = FontWeight.Bold)
+                    home -> MaterialTheme.typography.titleLarge.copy(fontSize = HomeTitleSize, lineHeight = 26.sp, fontWeight = FontWeight.Bold)
                     compact -> MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
                     else -> MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
                 },
