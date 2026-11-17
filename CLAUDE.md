@@ -56,17 +56,10 @@ Android emulator frontend (Kotlin + Compose), a heavily extended Lemuroid fork. 
   `com.omnidroid.debug:game`) are the fastest way to debug.
 
 ## Keeping context small
-Big outputs fill the session fast (one long session hit ~250k tokens of shell output and ~4.8M of file reads).
-- Search before reading: `grep -n` for the symbol, then Read with `offset`/`limit` around the hit. Many files
-  here are 1,000+ lines (`ConsoleLibrary.kt`, `LibraryScreen.kt`, `MainActivity.kt`); never read them whole.
-- Don't re-read a file you just edited; the edit tool errors if it didn't apply.
-- Gradle: always `-q` and filter, e.g. `./gradlew -q … 2>&1 | grep "^e:\|FAIL" | head`; only if that shows a
-  failure, rerun once and grep `-A8 "What went wrong"`.
-- CI logs: `gh run view <id> --log-failed | grep -E "What went wrong|FAILED|\.kt:[0-9]+" | head -30`, never the
-  full log.
-- adb: `uiautomator dump` piped through a filter (`ui.py dump "<regex>"`); downscale screenshots with PIL (e.g.
-  780x360) and crop to the area being checked before viewing; stitch several into one image.
-- Cap anything that lists files or diffs: `| head -40`, `git diff --stat`, `git log --oneline -5`.
+General rules are in `~/.claude/CLAUDE.md`. Here:
+- `ConsoleLibrary.kt`, `LibraryScreen.kt` and `MainActivity.kt` are 1,000+ lines: grep, then read slices.
+- Gradle: `./gradlew -q … 2>&1 | grep "^e:\|FAIL" | head`.
+- Phone UI: `ui.py dump "<regex>"` in the session scratchpad instead of raw `uiautomator` dumps.
 
 ## Architecture map
 - `retrograde-app-shared`: UI-free core. `lib/library/GameSystem.kt` is the central registry
