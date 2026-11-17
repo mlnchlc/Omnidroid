@@ -76,6 +76,7 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -330,7 +331,9 @@ internal fun ConsoleLibrary(
     val actionFocus = LocalCarouselActionFocus.current
     SideEffect { actionFocus?.controllerActive?.value = showControllerGlyph }
     val focusActions: () -> Boolean = {
-        actionFocus != null && runCatching { actionFocus.actions.requestFocus() }.isSuccess
+        // Only "handled" if focus really moved, so a failed request still falls back to normal
+        // focus navigation instead of swallowing the press.
+        actionFocus != null && runCatching { actionFocus.actions.requestFocus(FocusDirection.Enter) }.getOrDefault(false)
     }
 
     val adaptiveSpec = LocalAdaptiveLayout.current
