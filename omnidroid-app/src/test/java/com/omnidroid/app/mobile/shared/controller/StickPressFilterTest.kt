@@ -91,6 +91,27 @@ class StickPressFilterTest {
     }
 
     @Test
+    fun `a reverse that stays out counts once it has held`() {
+        val filter = StickPressFilter()
+        assertEquals(StickPressFilter.Press(1, 0), filter.update(1f, 0f, 0L))
+        assertNull(filter.update(0.1f, 0f, 30L))
+        // Opposite, not deep: waits to see whether it is the spring.
+        assertNull(filter.update(-0.7f, 0f, 50L))
+        assertNull(filter.tick(70L))
+        // Still out 40 ms later: a deliberate reverse.
+        assertEquals(StickPressFilter.Press(-1, 0), filter.tick(95L))
+    }
+
+    @Test
+    fun `a reverse that stays out is confirmed by the next stick event too`() {
+        val filter = StickPressFilter()
+        filter.update(0f, 1f, 0L)
+        filter.update(0f, 0.1f, 30L)
+        assertNull(filter.update(0f, -0.7f, 50L))
+        assertEquals(StickPressFilter.Press(0, -1), filter.update(0f, -0.75f, 92L))
+    }
+
+    @Test
     fun `a diagonal presses only the stronger direction`() {
         val filter = StickPressFilter()
         assertEquals(StickPressFilter.Press(0, 1), filter.update(0.65f, 0.8f, 0L))

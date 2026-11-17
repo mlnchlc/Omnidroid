@@ -146,11 +146,43 @@ class ControllerInputBridge {
                 event.getAxisValue(MotionEvent.AXIS_Y),
                 SystemClock.uptimeMillis(),
             )
-        if (press != null) {
-            dispatchDirectional(press.x, press.y, KeyEvent.ACTION_DOWN, event, dispatch)
-            dispatchDirectional(press.x, press.y, KeyEvent.ACTION_UP, event, dispatch)
-        }
+        if (press != null) dispatchPress(press, event.deviceId, event.source, dispatch)
+        scheduleReverseCheck(event.deviceId, event.source, dispatch)
         return true
+    }
+
+    private fun dispatchPress(
+        press: StickPressFilter.Press,
+        deviceId: Int,
+        source: Int,
+        dispatch: (KeyEvent) -> Boolean,
+    ) {
+        val now = SystemClock.uptimeMillis()
+        dispatchDirectional(press.x, press.y, KeyEvent.ACTION_DOWN, now, deviceId, source, dispatch)
+        dispatchDirectional(press.x, press.y, KeyEvent.ACTION_UP, now, deviceId, source, dispatch)
+    }
+
+    private var reverseCheck: Runnable? = null
+
+    /**
+     * A possible reverse waits to see if it stays out ([StickPressFilter.tick]); a stick held still
+     * sends no events, so check again once the wait is over.
+     */
+    private fun scheduleReverseCheck(
+        deviceId: Int,
+        source: Int,
+        dispatch: (KeyEvent) -> Boolean,
+    ) {
+        reverseCheck?.let(shoulderHandler::removeCallbacks)
+        reverseCheck = null
+        if (!stick.pending) return
+        val check =
+            Runnable {
+                reverseCheck = null
+                stick.tick(SystemClock.uptimeMillis())?.let { dispatchPress(it, deviceId, source, dispatch) }
+            }
+        reverseCheck = check
+        shoulderHandler.postDelayed(check, stick.reverseConfirmMs + 5)
     }
 
     private val shoulderHandler = Handler(Looper.getMainLooper())
@@ -212,7 +244,9 @@ class ControllerInputBridge {
         x: Int,
         y: Int,
         action: Int,
-        source: MotionEvent,
+        time: Long,
+        deviceId: Int,
+        source: Int,
         dispatch: (KeyEvent) -> Boolean,
     ) {
         val keyCode =
@@ -225,16 +259,16 @@ class ControllerInputBridge {
             }
         dispatch(
             KeyEvent(
-                source.downTime,
-                source.eventTime,
+                time,
+                time,
                 action,
                 keyCode,
                 0,
                 0,
-                source.deviceId,
+                deviceId,
                 0,
                 0,
-                source.source,
+                source,
             ),
         )
     }
