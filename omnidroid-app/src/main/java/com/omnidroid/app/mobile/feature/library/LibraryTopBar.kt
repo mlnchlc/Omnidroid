@@ -204,7 +204,8 @@ fun LibraryTopBar(
             onActivate = { controllerNav?.searchArmed?.value = true },
             focusRequester = controllerNav?.searchFocusRequester,
             canFocus = !gamepadConnected || searchArmed,
-            trailing = { LibrarySortButton(sort = sort, menu = sortMenu) },
+            // Portrait has little room beside the buttons: sort appears once search is open.
+            trailing = if (portrait && !searchExpanded) null else ({ LibrarySortButton(sort = sort, menu = sortMenu) }),
             modifier = searchModifier,
         )
     }
