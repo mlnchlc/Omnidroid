@@ -10,7 +10,7 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.BoxScope
-import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -60,7 +60,9 @@ fun BoxScope.SlotPreviewBeside(state: SlotPreviewState) {
                 contentScale = ContentScale.Fit,
                 modifier =
                     Modifier
-                        .fillMaxWidth(0.82f)
+                        // Fits inside the space beside the menu whatever the shape: a save made
+                        // in portrait is tall, one made in landscape is wide.
+                        .padding(28.dp)
                         .aspectRatio(bitmap.width.coerceAtLeast(1) / bitmap.height.coerceAtLeast(1).toFloat())
                         .clip(shape)
                         .border(2.dp, LibraryNeonGreen, shape),
