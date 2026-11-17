@@ -85,19 +85,14 @@ fun SystemStatusIndicators(
             Icon(
                 imageVector = Icons.Filled.SportsEsports,
                 contentDescription = stringResource(R.string.status_gamepad_connected),
-                modifier = Modifier.size(13.5.dp),
+                modifier = Modifier.size(chromeIconSize()),
                 tint = LocalContentColor.current.copy(alpha = StatusMutedAlpha),
             )
         }
         BatteryStatusIcon(battery)
         Text(
             text = clock,
-            style =
-                MaterialTheme.typography.labelSmall.copy(
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Medium,
-                    letterSpacing = (-0.2).sp,
-                ),
+            style = chromeTextStyle(),
         )
     }
 }
@@ -159,12 +154,7 @@ private fun ConnectionStatusIcon(status: ConnectionStatus) {
         val description = stringResource(R.string.status_cellular_connected, cellularLabel)
         Text(
             text = cellularLabel,
-            style =
-                MaterialTheme.typography.labelSmall.copy(
-                    fontSize = 10.5.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    letterSpacing = (-0.2).sp,
-                ),
+            style = chromeTextStyle(),
             color = LocalContentColor.current.copy(alpha = StatusMutedAlpha),
             modifier = Modifier.semantics { contentDescription = description },
         )
@@ -223,12 +213,7 @@ private fun BatteryStatusIcon(status: BatteryStatus) {
         )
         Text(
             text = "${status.percent}%",
-            style =
-                MaterialTheme.typography.labelSmall.copy(
-                    fontSize = 10.5.sp,
-                    fontWeight = FontWeight.Medium,
-                    letterSpacing = (-0.2).sp,
-                ),
+            style = chromeTextStyle(),
             color = color,
         )
     }

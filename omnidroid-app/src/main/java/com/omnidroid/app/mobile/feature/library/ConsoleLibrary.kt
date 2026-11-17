@@ -715,8 +715,11 @@ private fun LandscapeInfoPanel(
         ConsoleRotatingTitle(
             text = game.displayName,
             style =
-                (if (compact) MaterialTheme.typography.titleLarge else MaterialTheme.typography.headlineSmall)
-                    .copy(fontWeight = FontWeight.Bold),
+                when {
+                    home -> MaterialTheme.typography.titleLarge.copy(fontSize = HomeTitleSize, fontWeight = FontWeight.Bold)
+                    compact -> MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
+                    else -> MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
+                },
             // Home keeps the title on one line (it scrolls when long) so the details and buttons
             // below always fit beside the card.
             maxLines = if (compact || home) 1 else 2,
@@ -727,7 +730,7 @@ private fun LandscapeInfoPanel(
         if (home) {
             Text(
                 text = homeGameMeta(game),
-                style = MaterialTheme.typography.bodyMedium,
+                style = homeTextStyle(),
                 color = chromeColors.muted,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,

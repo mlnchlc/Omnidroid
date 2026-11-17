@@ -1,6 +1,8 @@
 package com.omnidroid.app.mobile.feature.library
 
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.graphics.Brush
 
 import android.text.format.DateUtils
@@ -113,6 +115,18 @@ import kotlin.math.abs
 import kotlin.math.floor
 import kotlin.math.roundToInt
 
+/**
+ * Home's type scale: one 13 sp body size (the top bar's) for meta lines, labels, captions and
+ * buttons, and [HomeTitleSize] for the selected game's title.
+ */
+@Composable
+internal fun homeTextStyle(
+    weight: FontWeight = FontWeight.Normal,
+    size: TextUnit = 13.sp,
+): TextStyle = MaterialTheme.typography.bodyMedium.copy(fontSize = size, fontWeight = weight, letterSpacing = 0.sp)
+
+internal val HomeTitleSize = 20.sp
+
 /** Card corner shared by every Home view. */
 internal val HomeCardCorner = 6.dp
 private val HomeRingWidth = 3.dp
@@ -204,8 +218,7 @@ internal fun HomeActions(
                 Text(
                     text = stringResource(if (continueGame) R.string.continue_playing else R.string.library_console_start),
                     style =
-                        (if (compact) MaterialTheme.typography.labelLarge else MaterialTheme.typography.titleMedium)
-                            .copy(fontWeight = FontWeight.Bold),
+                        if (compact) homeTextStyle(FontWeight.Bold) else MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                     maxLines = 1,
                 )
             }
@@ -362,10 +375,10 @@ internal fun HomeCardCaption(
                 .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.85f))))
                 .padding(start = 10.dp, end = 10.dp, top = 28.dp, bottom = 10.dp),
     ) {
-        Text(system, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.8f), maxLines = 1)
+        Text(system, style = homeTextStyle(size = 11.sp), color = Color.White.copy(alpha = 0.8f), maxLines = 1)
         Text(
             game.displayName,
-            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+            style = homeTextStyle(FontWeight.Bold),
             color = Color.White,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
