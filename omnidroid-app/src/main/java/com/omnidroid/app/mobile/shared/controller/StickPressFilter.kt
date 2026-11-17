@@ -13,7 +13,8 @@ import kotlin.math.sign
  *   a thumb reversing keeps going and stays out. So an opposite tilt within [reboundMs] of letting go
  *   waits: it presses at once if it goes deep ([reverseDeepLean]), presses if it stays out for
  *   [reverseConfirmMs] (see [tick]), and is dropped as a rebound if it falls back first.
- * - Holding the stick repeats, but only after [holdDelayMs], every [holdRepeatMs].
+ * - Holding the stick repeats after [holdDelayMs], every [holdRepeatMs]. A stick held still sends
+ *   no events, so the caller drives this with [tick] at [nextTickIn].
  *
  * Pure (time is passed in) so it can be unit tested.
  */
@@ -23,8 +24,8 @@ class StickPressFilter(
     private val reboundMs: Long = 150L,
     private val reverseDeepLean: Float = 0.85f,
     val reverseConfirmMs: Long = 40L,
-    private val holdDelayMs: Long = 550L,
-    private val holdRepeatMs: Long = 180L,
+    private val holdDelayMs: Long = 400L,
+    private val holdRepeatMs: Long = 110L,
 ) {
     /** A press in one direction: x or y is -1 or 1, the other 0. */
     data class Press(val x: Int, val y: Int)
@@ -72,11 +73,7 @@ class StickPressFilter(
                 heldY = 0
                 return null
             }
-            if (now - pressedAt >= holdDelayMs && now - lastRepeatAt >= holdRepeatMs) {
-                lastRepeatAt = now
-                return Press(heldX, heldY)
-            }
-            return null
+            return holdRepeat(now)
         }
         if (pending) {
             val lean = if (pendingX != 0) x * pendingX else y * pendingY
@@ -107,9 +104,32 @@ class StickPressFilter(
         return press(dx, dy, now)
     }
 
-    /** Time passing with no new stick event: confirms a reverse that stayed out long enough. */
+    /**
+     * Time passing with no new stick event: confirms a reverse that stayed out long enough, or
+     * repeats a held direction.
+     */
     fun tick(now: Long): Press? =
-        if (pending && now - pendingSince >= reverseConfirmMs) confirmPending(now) else null
+        when {
+            engaged -> holdRepeat(now)
+            pending && now - pendingSince >= reverseConfirmMs -> confirmPending(now)
+            else -> null
+        }
+
+    /** Milliseconds until [tick] has something to do, or null when nothing is waiting. */
+    fun nextTickIn(now: Long): Long? =
+        when {
+            engaged -> (holdDue() - now).coerceAtLeast(1L)
+            pending -> (pendingSince + reverseConfirmMs - now).coerceAtLeast(1L)
+            else -> null
+        }
+
+    private fun holdDue(): Long = if (lastRepeatAt == pressedAt) pressedAt + holdDelayMs else lastRepeatAt + holdRepeatMs
+
+    private fun holdRepeat(now: Long): Press? {
+        if (now < holdDue()) return null
+        lastRepeatAt = now
+        return Press(heldX, heldY)
+    }
 
     private fun confirmPending(now: Long): Press {
         val dx = pendingX
