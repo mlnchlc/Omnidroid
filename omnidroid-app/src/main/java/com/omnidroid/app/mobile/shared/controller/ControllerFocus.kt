@@ -1,8 +1,9 @@
 package com.omnidroid.app.mobile.shared.controller
 
+import androidx.compose.ui.graphics.Color
+import com.omnidroid.app.mobile.shared.compose.ui.accentColor
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import com.omnidroid.app.mobile.shared.compose.ui.chromeContentColor
 import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.geometry.Size
@@ -22,9 +23,9 @@ import androidx.compose.ui.unit.dp
 import com.omnidroid.lib.library.db.entity.Game
 
 /**
- * Controller / D-pad focus ring: a crisp ring in the content colour (white in dark mode) drawn just
- * inside the element. Inside, so lists, cards and docks that clip their children never cut it; and
- * not green, so it stays visible on green buttons and is never mistaken for a "selected" border.
+ * Controller / D-pad focus ring: a crisp ring in the accent colour (Display > Accent color) drawn
+ * just inside the element, so lists, cards and docks that clip their children never cut it. A thin
+ * dark line inside the ring keeps it readable on a fill of the same colour (a green Start button).
  */
 fun Modifier.controllerFocusGlow(
     shape: Shape = RoundedCornerShape(12.dp),
@@ -39,7 +40,7 @@ fun Modifier.controllerFocusGlow(
             animationSpec = tween(120),
             label = "controllerFocus",
         )
-        val color = chromeContentColor
+        val color = accentColor
         this
             .onFocusChanged { focused = it.isFocused }
             .drawWithContent {
@@ -53,6 +54,18 @@ fun Modifier.controllerFocusGlow(
                 val outline = shape.createOutline(ringSize, layoutDirection, this)
                 translate(offset, offset) {
                     drawOutline(outline, color.copy(alpha = alpha), style = Stroke(width = stroke))
+                }
+                val line = stroke / 2f
+                val innerOffset = offset + stroke / 2f + line / 2f
+                val innerSize = Size(size.width - innerOffset * 2f, size.height - innerOffset * 2f)
+                if (innerSize.minDimension > 0f) {
+                    translate(innerOffset, innerOffset) {
+                        drawOutline(
+                            shape.createOutline(innerSize, layoutDirection, this),
+                            Color.Black.copy(alpha = 0.55f * alpha),
+                            style = Stroke(width = line),
+                        )
+                    }
                 }
             }
     }

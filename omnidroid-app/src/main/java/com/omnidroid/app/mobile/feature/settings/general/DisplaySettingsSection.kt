@@ -2,6 +2,10 @@ package com.omnidroid.app.mobile.feature.settings.general
 
 import androidx.compose.material3.MaterialTheme
 import com.omnidroid.app.shared.settings.HDModeQuality
+import com.omnidroid.app.utils.android.settings.stringPreferenceState
+import com.omnidroid.app.utils.android.settings.OmnidroidSettingsColorChoice
+import com.omnidroid.app.mobile.shared.compose.ui.LocalAppDarkTheme
+import com.omnidroid.app.mobile.shared.compose.ui.AccentPreset
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -56,6 +60,17 @@ internal fun DisplaySettings(navController: NavController) {
                 ),
             titleRes = R.string.settings_title_app_theme,
             items = stringListResource(R.array.pref_key_app_theme_display_names),
+        )
+        val accent = stringPreferenceState(R.string.pref_key_accent_color, AccentPreset.GREEN.key)
+        val dark = LocalAppDarkTheme.current
+        val presets = AccentPreset.entries
+        OmnidroidSettingsColorChoice(
+            selectedIndex = presets.indexOf(AccentPreset.fromKey(accent.value)),
+            colors = presets.map { if (dark) it.dark else it.light },
+            labels = presets.map { stringResource(it.labelRes()) },
+            onSelect = { accent.value = presets[it].key },
+            titleRes = R.string.settings_title_accent_color,
+            subtitleRes = R.string.settings_description_accent_color,
         )
         OmnidroidSettingsSwitch(
             state = immersiveMode,
@@ -180,3 +195,16 @@ internal fun DisplaySettings(navController: NavController) {
         )
     }
 }
+
+private fun AccentPreset.labelRes(): Int =
+    when (this) {
+        AccentPreset.GREEN -> R.string.accent_color_green
+        AccentPreset.BLUE -> R.string.accent_color_blue
+        AccentPreset.PURPLE -> R.string.accent_color_purple
+        AccentPreset.PINK -> R.string.accent_color_pink
+        AccentPreset.RED -> R.string.accent_color_red
+        AccentPreset.ORANGE -> R.string.accent_color_orange
+        AccentPreset.YELLOW -> R.string.accent_color_yellow
+        AccentPreset.TEAL -> R.string.accent_color_teal
+        AccentPreset.WHITE -> R.string.accent_color_white
+    }

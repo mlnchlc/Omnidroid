@@ -2,6 +2,8 @@ package com.omnidroid.app.mobile.feature.library
 
 import com.omnidroid.app.mobile.shared.compose.ui.libraryAccentColor
 import com.omnidroid.app.mobile.shared.compose.ui.OnLibraryNeonGreen
+import androidx.compose.runtime.SideEffect
+import com.omnidroid.app.mobile.shared.compose.ui.accentColor
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.EnterExitState
 import androidx.compose.animation.ExperimentalSharedTransitionApi
@@ -333,6 +335,7 @@ internal fun ConsoleLibrary(
 
     // Home: Down moves from the carousel to its Start / favourite / more buttons.
     val actionFocus = LocalCarouselActionFocus.current
+    SideEffect { actionFocus?.controllerActive?.value = showControllerGlyph }
     val focusActions: () -> Boolean = {
         actionFocus != null && runCatching { actionFocus.actions.requestFocus() }.isSuccess
     }
@@ -621,6 +624,7 @@ private fun ConsoleLandscapeCard(
 ) {
     val home = LocalHomeCarouselStyle.current
     val carouselFocus = LocalCarouselActionFocus.current
+    val accent = accentColor
     val corner = if (home) HomeCardCorner else LandscapeCardCorner
     val shape = RoundedCornerShape(corner)
     Box(
@@ -629,9 +633,13 @@ private fun ConsoleLandscapeCard(
                 .fillMaxSize()
                 .then(
                     if (home) {
-                        Modifier.homeSelectionRing(corner, focused = { carouselFocus?.carouselFocused?.value == true }) { focus() }
+                        Modifier.homeSelectionRing(
+                            corner,
+                            accent,
+                            dimmed = { carouselFocus != null && carouselFocus.controllerActive.value && !carouselFocus.carouselFocused.value },
+                        ) { focus() }
                     } else {
-                        Modifier.consoleSelectionGlow(LandscapeCardCorner, focus, pulse)
+                        Modifier.consoleSelectionGlow(LandscapeCardCorner, focus, pulse, accent)
                     },
                 )
                 .then(sharedModifier)
@@ -926,6 +934,7 @@ private fun ConsolePortraitCard(
 ) {
     val home = LocalHomeCarouselStyle.current
     val carouselFocus = LocalCarouselActionFocus.current
+    val accent = accentColor
     val corner = if (home) HomeCardCorner * 2 else PortraitCardCorner
     val shape = RoundedCornerShape(corner)
     val currentFocus by rememberUpdatedState(focus)
@@ -936,9 +945,13 @@ private fun ConsolePortraitCard(
                 .fillMaxSize()
                 .then(
                     if (home) {
-                        Modifier.homeSelectionRing(corner, focused = { carouselFocus?.carouselFocused?.value == true }) { focus() }
+                        Modifier.homeSelectionRing(
+                            corner,
+                            accent,
+                            dimmed = { carouselFocus != null && carouselFocus.controllerActive.value && !carouselFocus.carouselFocused.value },
+                        ) { focus() }
                     } else {
-                        Modifier.consoleSelectionGlow(PortraitCardCorner, focus, pulse)
+                        Modifier.consoleSelectionGlow(PortraitCardCorner, focus, pulse, accent)
                     },
                 )
                 .then(sharedModifier)
@@ -1278,7 +1291,7 @@ internal fun ConsoleActions(
                 stringResource(
                     if (favorite) R.string.game_context_menu_remove_from_favorites else R.string.game_context_menu_add_to_favorites,
                 ),
-            tint = if (favorite) libraryAccentColor else chromeColors.muted,
+            tint = if (favorite) accentColor else chromeColors.muted,
             onClick = {
                 game?.let {
                     favorite = !favorite
@@ -1443,6 +1456,7 @@ private fun Modifier.consoleSelectionGlow(
     corner: Dp,
     amount: () -> Float,
     pulse: State<Float>,
+    color: Color = LibraryNeonGreen,
 ): Modifier =
     drawBehind {
         val selected = amount()
@@ -1453,7 +1467,7 @@ private fun Modifier.consoleSelectionGlow(
         for (layer in GlowLayers downTo 1) {
             val grow = spread * layer / GlowLayers
             drawRoundRect(
-                color = LibraryNeonGreen.copy(alpha = GlowLayerAlpha * strength),
+                color = color.copy(alpha = GlowLayerAlpha * strength),
                 topLeft = Offset(-grow, -grow),
                 size = Size(size.width + grow * 2, size.height + grow * 2),
                 cornerRadius = CornerRadius(radius + grow),
@@ -1465,7 +1479,7 @@ private fun Modifier.consoleSelectionGlow(
         if (selected <= 0.01f) return@drawWithContent
         val stroke = 1.5.dp.toPx()
         drawRoundRect(
-            color = LibraryNeonGreen.copy(alpha = selected),
+            color = color.copy(alpha = selected),
             topLeft = Offset(stroke / 2, stroke / 2),
             size = Size(size.width - stroke, size.height - stroke),
             cornerRadius = CornerRadius(corner.toPx() - stroke / 2),

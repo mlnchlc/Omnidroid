@@ -1,5 +1,10 @@
 package com.omnidroid.app.utils.android.settings
 
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -409,6 +414,56 @@ fun OmnidroidSettingsSegmented(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 label(Modifier.weight(1f).padding(end = 12.dp))
                 segments()
+            }
+        }
+    }
+}
+
+/**
+ * A colour choice as a row of round swatches under the title; the chosen one carries a ring.
+ * Each swatch is a radio button named by [labels] for screen readers.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun OmnidroidSettingsColorChoice(
+    selectedIndex: Int,
+    colors: List<Color>,
+    labels: List<String>,
+    onSelect: (Int) -> Unit,
+    titleRes: Int,
+    subtitleRes: Int? = null,
+    modifier: Modifier = Modifier,
+) {
+    val container = settingsRowContainerColor() ?: Color.Transparent
+    Column(
+        modifier = modifier.fillMaxWidth().background(container).padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Column {
+            Text(stringResource(titleRes), style = MaterialTheme.typography.bodyLarge, color = chromeColors.content)
+            if (subtitleRes != null) {
+                Text(stringResource(subtitleRes), style = MaterialTheme.typography.bodySmall, color = chromeColors.muted)
+            }
+        }
+        FlowRow(
+            modifier = Modifier.selectableGroup(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            colors.forEachIndexed { index, color ->
+                val selected = index == selectedIndex
+                Box(
+                    modifier =
+                        Modifier
+                            .size(40.dp)
+                            .controllerFocusGlow(CircleShape)
+                            .border(BorderStroke(2.dp, if (selected) chromeColors.content else Color.Transparent), CircleShape)
+                            .padding(5.dp)
+                            .background(color, CircleShape)
+                            .border(BorderStroke(1.dp, chromeColors.panelBorder), CircleShape)
+                            .selectable(selected = selected, role = Role.RadioButton) { onSelect(index) }
+                            .semantics { contentDescription = labels[index] },
+                )
             }
         }
     }

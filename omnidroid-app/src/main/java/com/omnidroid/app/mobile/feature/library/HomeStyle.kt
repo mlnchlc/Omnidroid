@@ -1,5 +1,8 @@
 package com.omnidroid.app.mobile.feature.library
 
+import androidx.compose.foundation.focusGroup
+import androidx.compose.ui.focus.FocusDirection
+import com.omnidroid.app.mobile.shared.compose.ui.accentColor
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.text.TextStyle
@@ -190,8 +193,11 @@ private fun rememberPlayTimeMs(game: Game): Long {
  * from the buttons returns to [carousel].
  */
 internal class CarouselActionFocus(val actions: FocusRequester, val carousel: FocusRequester) {
-    /** The carousel itself has controller focus: its selected card's ring turns white. */
+    /** The carousel itself has controller focus. */
     val carouselFocused = mutableStateOf(false)
+
+    /** A controller is in use: the selected card's ring dims while focus is elsewhere. */
+    val controllerActive = mutableStateOf(false)
 }
 
 internal val LocalCarouselActionFocus = staticCompositionLocalOf<CarouselActionFocus?> { null }
@@ -213,7 +219,27 @@ internal fun HomeActions(
     var favorite by remember(game?.id, game?.isFavorite) { mutableStateOf(game?.isFavorite == true) }
     val carouselFocus = LocalCarouselActionFocus.current
     Row(
-        modifier = modifier.then(if (carouselFocus != null) Modifier.focusProperties { up = carouselFocus.carousel } else Modifier),
+        modifier =
+            modifier.then(
+                if (carouselFocus != null) {
+                    // A controller stays in this row: Up and Left (from Start) go back to the
+                    // carousel; Right past the last button and Down go nowhere.
+                    Modifier
+                        .focusProperties {
+                            onExit = {
+                                when (requestedFocusDirection) {
+                                    FocusDirection.Up, FocusDirection.Left -> {
+                                        cancelFocusChange()
+                                        runCatching { carouselFocus.carousel.requestFocus() }
+                                    }
+                                    else -> cancelFocusChange()
+                                }
+                            }
+                        }.focusGroup()
+                } else {
+                    Modifier
+                },
+            ),
         horizontalArrangement = Arrangement.spacedBy(if (compact) 8.dp else 12.dp, if (compact) Alignment.Start else Alignment.CenterHorizontally),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -258,7 +284,7 @@ internal fun HomeActions(
                     stringResource(
                         if (favorite) R.string.game_context_menu_remove_from_favorites else R.string.game_context_menu_add_to_favorites,
                     ),
-                tint = if (favorite) LibraryNeonGreen else chromeColors.content,
+                tint = if (favorite) accentColor else chromeColors.content,
             )
         }
         HomeRoundButton(size = height, onClick = onMore) {
@@ -290,7 +316,8 @@ private fun HomeRoundButton(
  */
 internal fun Modifier.homeSelectionRing(
     corner: Dp,
-    focused: () -> Boolean = { false },
+    color: Color,
+    dimmed: () -> Boolean = { false },
     amount: () -> Float = { 1f },
 ): Modifier =
     drawWithContent {
@@ -299,8 +326,9 @@ internal fun Modifier.homeSelectionRing(
         if (alpha <= 0f) return@drawWithContent
         val outset = HomeRingOutset.toPx() + HomeRingWidth.toPx() / 2
         drawRoundRect(
-            // White while a controller is on the carousel (the focus colour), green otherwise.
-            color = (if (focused()) Color.White else LibraryNeonGreen).copy(alpha = alpha),
+            // Accent; dimmed while a controller's focus is elsewhere (buttons, top bar), so full
+            // strength shows the carousel itself has focus.
+            color = color.copy(alpha = alpha * (if (dimmed()) 0.4f else 1f)),
             topLeft = Offset(-outset, -outset),
             size = Size(size.width + outset * 2, size.height + outset * 2),
             cornerRadius = CornerRadius(corner.toPx() + outset),
@@ -348,7 +376,7 @@ internal fun HomeViewSwitch(
                     imageVector = option.icon(),
                     contentDescription = stringResource(option.labelRes()),
                     modifier = Modifier.size(chromeIconSize()),
-                    tint = if (selected) LibraryNeonGreen else chromeColors.muted,
+                    tint = if (selected) accentColor else chromeColors.muted,
                 )
             }
         }
@@ -370,7 +398,7 @@ internal fun HomeViewCycleButton(
             imageVector = view.icon(),
             contentDescription = stringResource(R.string.home_view_switch, stringResource(view.labelRes())),
             modifier = Modifier.size(chromeIconSize()),
-            tint = LibraryNeonGreen,
+            tint = accentColor,
         )
     }
 }
