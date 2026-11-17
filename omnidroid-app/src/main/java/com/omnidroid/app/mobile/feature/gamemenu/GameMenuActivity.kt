@@ -277,7 +277,9 @@ class GameMenuActivity : RetrogradeComponentActivity() {
     }
 
     override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
-        runCatching { controllerBridge.navigation?.contentFocusRequester?.requestFocus() }
+        // No focus grab here: sticks and triggers send a stream of motion events, and re-focusing
+        // the remembered row on each one can pull focus back while it moves. D-pad presses reach
+        // dispatchKeyEvent (as keys, or synthesized from the hat), which does the grab.
         if (controllerBridge.dispatchMotion(event) { super.dispatchKeyEvent(it) }) {
             return true
         }
