@@ -125,13 +125,6 @@ fun SideMenuScaffold(
                     )
                     .padding(bottom = maxOf(bottomReserved, WindowInsets.safeDrawing.asPaddingValues().calculateBottomPadding())),
             ) {
-                if (sheet) {
-                    Box(
-                        Modifier.padding(top = 8.dp).align(Alignment.CenterHorizontally)
-                            .size(width = 40.dp, height = 4.dp)
-                            .background(chromeColors.gameMenuAccent, RoundedCornerShape(2.dp)),
-                    )
-                }
                 if (!canGoBack && homeHeader != null) {
                     homeHeader { state.closeThen() }
                 } else {
@@ -160,10 +153,17 @@ fun SideMenuScaffold(
                     modifier = Modifier.fillMaxWidth().height(sideMenuSheetHeight(maxHeight.value).dp),
                     color = panelColor,
                     contentColor = chromeContentColor,
-                    shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+                    // Same treatment as the side panel: straight edges and an accent line along the
+                    // edge that faces the game.
+                    shape = RectangleShape,
                     tonalElevation = 0.dp,
                     shadowElevation = 0.dp,
-                ) { panelContent() }
+                ) {
+                    Column(Modifier.fillMaxSize()) {
+                        Box(Modifier.fillMaxWidth().height(3.dp).background(chromeColors.gameMenuAccent))
+                        Box(Modifier.weight(1f).fillMaxWidth()) { panelContent() }
+                    }
+                }
             }
         } else {
             AnimatedVisibility(
