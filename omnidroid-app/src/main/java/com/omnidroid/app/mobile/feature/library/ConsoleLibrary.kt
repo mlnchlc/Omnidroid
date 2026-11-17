@@ -938,6 +938,32 @@ private fun ConsolePortraitCard(
                     decodeWidth = maxWidth,
                 )
             }
+            if (home) {
+                // Home's caption: console, title and the same meta line as the other views.
+                Column(
+                    modifier =
+                        Modifier
+                            .align(Alignment.BottomCenter)
+                            .fillMaxWidth()
+                            .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.9f))))
+                            .padding(start = 14.dp, end = 14.dp, top = 48.dp, bottom = 14.dp),
+                ) {
+                    ConsoleRotatingTitle(
+                        text = game.displayName,
+                        style = MaterialTheme.typography.titleMedium.copy(fontSize = 17.sp, fontWeight = FontWeight.Bold),
+                        maxLines = 1,
+                        active = centered,
+                        color = Color.White,
+                    )
+                    Text(
+                        text = homeGameMeta(game),
+                        style = homeTextStyle(),
+                        color = Color.White.copy(alpha = 0.75f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            } else {
             ConsoleSystemChip(
                 game = game,
                 modifier =
@@ -972,6 +998,7 @@ private fun ConsolePortraitCard(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 ConsolePortraitGameStats(game = game)
+            }
             }
         }
         Box(
