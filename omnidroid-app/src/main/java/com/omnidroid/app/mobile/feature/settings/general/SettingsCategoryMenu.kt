@@ -1,5 +1,16 @@
 package com.omnidroid.app.mobile.feature.settings.general
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Memory
+import androidx.compose.material.icons.outlined.Palette
+import androidx.compose.material.icons.outlined.Save
+import androidx.compose.material.icons.outlined.SportsEsports
+import androidx.compose.material.icons.outlined.Tune
+import androidx.compose.material.icons.outlined.VideoLibrary
+import androidx.compose.ui.graphics.vector.ImageVector
+import com.omnidroid.app.mobile.shared.compose.ui.chromeColors
 import androidx.compose.foundation.background
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -87,6 +98,19 @@ internal fun SettingsBackHeader(
     }
 }
 
+/** Section icon for the rail and the portrait chips. */
+private fun SettingsSection.icon(): ImageVector =
+    when (this) {
+        SettingsSection.LIBRARY -> Icons.Outlined.VideoLibrary
+        SettingsSection.DISPLAY -> Icons.Outlined.Palette
+        SettingsSection.CONTROLS -> Icons.Outlined.SportsEsports
+        SettingsSection.SAVES -> Icons.Outlined.Save
+        SettingsSection.EMULATION -> Icons.Outlined.Memory
+        SettingsSection.ADVANCED -> Icons.Outlined.Tune
+        SettingsSection.ABOUT -> Icons.Outlined.Info
+    }
+
+/** Portrait: the sections as a scrolling row of chips; the current one is filled. */
 @Composable
 internal fun SettingsTopMenu(
     modifier: Modifier = Modifier,
@@ -96,28 +120,16 @@ internal fun SettingsTopMenu(
     onActivate: (SettingsSection) -> Unit,
 ) {
     val listState = rememberLazyListState()
-
     LaunchedEffect(selected) {
         val index = SettingsSection.values().indexOf(selected)
-        if (index >= 0) {
-            listState.animateScrollToItem(index)
-        }
+        if (index >= 0) listState.animateScrollToItem(index)
     }
-
-    Column(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .homeChromeBackground(),
-    ) {
+    Column(modifier = modifier.fillMaxWidth()) {
         LazyRow(
             state = listState,
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .height(48.dp),
-            contentPadding = PaddingValues(horizontal = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
+            contentPadding = PaddingValues(horizontal = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             items(SettingsSection.values()) { item ->
@@ -126,54 +138,31 @@ internal fun SettingsTopMenu(
                     onClick = { onActivate(item) },
                     modifier =
                         Modifier
-                            .fillMaxHeight()
+                            .height(36.dp)
                             .focusRequester(focusRequesters.getValue(item))
-                            .onFocusChanged { if (it.isFocused) onFocused(item) },
-                    shape = RectangleShape,
-                    color =
-                        if (isSelected) {
-                            chromeContentColor.copy(alpha = 0.08f)
-                        } else {
-                            Color.Transparent
-                        },
+                            .onFocusChanged { if (it.isFocused) onFocused(item) }
+                            .controllerFocusGlow(CircleShape),
+                    shape = CircleShape,
+                    color = if (isSelected) chromeContentColor else chromeColors.panel,
+                    contentColor = if (isSelected) chromeColors.panel else chromeContentColor,
+                    border = if (isSelected) null else BorderStroke(1.dp, chromeColors.panelBorder),
                 ) {
-                    Box(
-                        modifier =
-                            Modifier
-                                .fillMaxHeight()
-                                .padding(horizontal = 14.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
+                    Box(Modifier.padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
                         Text(
                             text = stringResource(item.titleId),
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                            color = if (isSelected) chromeContentColor else chromeMutedContentColor,
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.SemiBold,
                             maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                        Box(
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .height(3.dp)
-                                    .align(Alignment.BottomCenter)
-                                    .background(if (isSelected) LibraryNeonGreen else Color.Transparent),
                         )
                     }
                 }
             }
         }
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .height(1.dp)
-                    .background(chromeContentColor.copy(alpha = 0.08f)),
-        )
+        Box(Modifier.fillMaxWidth().height(1.dp).background(chromeColors.divider))
     }
 }
 
+/** Landscape: a rail of sections with icons; the current one sits on a filled pill. */
 @Composable
 internal fun SettingsSidebar(
     modifier: Modifier = Modifier,
@@ -182,53 +171,56 @@ internal fun SettingsSidebar(
     onFocused: (SettingsSection) -> Unit,
     onActivate: (SettingsSection) -> Unit,
 ) {
-    Column(
-        modifier =
-            modifier
-                .width(SettingsSidebarWidth)
-                .fillMaxHeight()
-                .verticalScroll(rememberScrollState())
-                .padding(top = 8.dp, bottom = 16.dp),
-    ) {
-        SettingsSection.values().forEach { item ->
-            val isSelected = item == selected
-            Surface(
-                onClick = { onActivate(item) },
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .focusRequester(focusRequesters.getValue(item))
-                        .onFocusChanged { if (it.isFocused) onFocused(item) },
-                shape = RectangleShape,
-                color =
-                    if (isSelected) {
-                        chromeContentColor.copy(alpha = 0.08f)
-                    } else {
-                        Color.Transparent
-                    },
-            ) {
-                Row(
-                    modifier = Modifier.height(48.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+    Row(modifier = modifier.fillMaxHeight()) {
+        Column(
+            modifier =
+                Modifier
+                    .width(SettingsSidebarWidth)
+                    .fillMaxHeight()
+                    .background(chromeColors.panel)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 10.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            SettingsSection.values().forEach { item ->
+                val isSelected = item == selected
+                val shape = RoundedCornerShape(10.dp)
+                Surface(
+                    onClick = { onActivate(item) },
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .height(44.dp)
+                            .focusRequester(focusRequesters.getValue(item))
+                            .onFocusChanged { if (it.isFocused) onFocused(item) }
+                            .controllerFocusGlow(shape),
+                    shape = shape,
+                    color = if (isSelected) chromeColors.panelSelected else Color.Transparent,
+                    contentColor = chromeContentColor,
                 ) {
-                    Box(
-                        modifier =
-                            Modifier
-                                .width(4.dp)
-                                .fillMaxHeight()
-                                .background(if (isSelected) LibraryNeonGreen else Color.Transparent),
-                    )
-                    Text(
-                        text = stringResource(item.titleId),
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                        color = if (isSelected) chromeContentColor else chromeMutedContentColor,
-                        modifier = Modifier.padding(start = 16.dp, end = 12.dp),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Icon(
+                            imageVector = item.icon(),
+                            contentDescription = null,
+                            tint = if (isSelected) LibraryNeonGreen else chromeMutedContentColor,
+                            modifier = Modifier.size(20.dp),
+                        )
+                        Text(
+                            text = stringResource(item.titleId),
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                            color = if (isSelected) chromeContentColor else chromeMutedContentColor,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                 }
             }
         }
+        Box(Modifier.width(1.dp).fillMaxHeight().background(chromeColors.divider))
     }
 }
