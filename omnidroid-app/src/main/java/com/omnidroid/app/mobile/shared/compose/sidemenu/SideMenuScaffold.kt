@@ -11,6 +11,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -75,6 +76,8 @@ fun SideMenuScaffold(
     onClosed: () -> Unit = {},
     /** Drawn over the scrim, in the space beside the panel (for example a save preview). */
     beside: (@Composable BoxScope.() -> Unit)? = null,
+    /** Replaces the title row on the first page (for example the game's cover and name). */
+    homeHeader: (@Composable (onClose: () -> Unit) -> Unit)? = null,
     content: @Composable () -> Unit,
 ) {
     val closed by rememberUpdatedState(onClosed)
@@ -129,7 +132,11 @@ fun SideMenuScaffold(
                             .background(chromeColors.gameMenuAccent, RoundedCornerShape(2.dp)),
                     )
                 }
-                SideMenuHeader(title, canGoBack) { if (canGoBack) onBack() else state.closeThen() }
+                if (!canGoBack && homeHeader != null) {
+                    homeHeader { state.closeThen() }
+                } else {
+                    SideMenuHeader(title, canGoBack) { if (canGoBack) onBack() else state.closeThen() }
+                }
                 Box(Modifier.fillMaxWidth().height(1.dp).background(chromeColors.divider))
                 Box(Modifier.weight(1f).fillMaxWidth()) {
                     CompositionLocalProvider(
@@ -188,14 +195,8 @@ val LocalSideMenuIsSheet = staticCompositionLocalOf { false }
 
 @Composable
 private fun SideMenuHeader(title: String, canGoBack: Boolean, onClick: () -> Unit) {
-    Row(Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-        Surface(
-            onClick = onClick,
-            modifier = Modifier.size(40.dp).controllerFocusGlow(CircleShape),
-            shape = CircleShape,
-            color = Color.Transparent,
-            contentColor = chromeContentColor,
-        ) {
+    Row(Modifier.fillMaxWidth().height(64.dp).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+        SideMenuRoundButton(onClick = onClick) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
                     if (canGoBack) Icons.AutoMirrored.Filled.ArrowBack else Icons.Filled.Close,
@@ -210,5 +211,23 @@ private fun SideMenuHeader(title: String, canGoBack: Boolean, onClick: () -> Uni
             modifier = Modifier.padding(start = 8.dp),
             maxLines = 1,
         )
+    }
+}
+
+/** 44 dp outlined round button used for Back and Close in the menu header. */
+@Composable
+fun SideMenuRoundButton(
+    onClick: () -> Unit,
+    content: @Composable () -> Unit,
+) {
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.size(44.dp).controllerFocusGlow(CircleShape),
+        shape = CircleShape,
+        color = Color.Transparent,
+        contentColor = chromeContentColor,
+        border = BorderStroke(1.dp, chromeColors.panelBorder),
+    ) {
+        Box(contentAlignment = Alignment.Center) { content() }
     }
 }

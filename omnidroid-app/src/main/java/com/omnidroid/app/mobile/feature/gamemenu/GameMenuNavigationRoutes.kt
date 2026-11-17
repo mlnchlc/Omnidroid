@@ -31,17 +31,17 @@ enum class GameMenuRoute(
     ),
     SAVE(
         route = "save",
-        titleId = R.string.game_menu_save,
+        titleId = R.string.game_menu_save_state,
         parent = HOME,
     ),
     LOAD(
         route = "load",
-        titleId = R.string.game_menu_load,
+        titleId = R.string.game_menu_load_state,
         parent = HOME,
     ),
     OPTIONS(
         route = "options",
-        titleId = R.string.game_menu_settings,
+        titleId = R.string.game_menu_game_settings,
         parent = HOME,
     ),
     ;

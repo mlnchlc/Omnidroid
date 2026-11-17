@@ -37,20 +37,6 @@ fun GameMenuCoreOptionsScreen(viewModel: GameMenuCoreOptionsViewModel, gameMenuR
         runCatching { context.getString(GameSystem.findById(request.game.systemId).titleResId) }.getOrNull()
     }
     SideMenuPage("game-options") {
-        MenuSection("controllers", visible = ports.isNotEmpty(), titleRes = R.string.core_settings_category_controllers) {
-            ports.forEach { (port, configs) ->
-                key(port) {
-                    val pref = stringPreferenceState(
-                        ControllerConfigsManager.getSharedPreferencesId(request.game.systemId, request.coreConfig.coreID, port),
-                        configs.first().name,
-                    )
-                    MenuChoice(
-                        id = "controller-$port", title = { Text(stringResource(R.string.core_settings_controller, (port + 1).toString())) },
-                        options = configs.map { MenuOption(it.name, stringResource(it.displayName)) }, value = pref.value,
-                    ) { pref.value = it }
-                }
-            }
-        }
         MenuSection(
             "core",
             visible = options.isNotEmpty(),
@@ -76,6 +62,20 @@ fun GameMenuCoreOptionsScreen(viewModel: GameMenuCoreOptionsViewModel, gameMenuR
                             subtitle = { Text(stringResource(R.string.core_option_current_value, pref.value)) },
                         ) { pref.value = it }
                     }
+                }
+            }
+        }
+        MenuSection("controllers", visible = ports.isNotEmpty(), titleRes = R.string.core_settings_category_controllers) {
+            ports.forEach { (port, configs) ->
+                key(port) {
+                    val pref = stringPreferenceState(
+                        ControllerConfigsManager.getSharedPreferencesId(request.game.systemId, request.coreConfig.coreID, port),
+                        configs.first().name,
+                    )
+                    MenuChoice(
+                        id = "controller-$port", title = { Text(stringResource(R.string.core_settings_controller, (port + 1).toString())) },
+                        options = configs.map { MenuOption(it.name, stringResource(it.displayName)) }, value = pref.value,
+                    ) { pref.value = it }
                 }
             }
         }
