@@ -446,7 +446,14 @@ private class LandscapeMetrics(maxWidth: Dp, maxHeight: Dp, home: Boolean = fals
     val bigHeight = (maxHeight - edge * 2).coerceIn(96.dp, 440.dp)
     val bigWidth = bigHeight * LibraryGameCardAspectRatio
     // Home's details (title, meta line, buttons) need a little more room above the small cards.
-    val smallHeight = bigHeight * (if (home) 0.48f else 0.55f)
+    // Home keeps room under the small cards for its title, meta line and buttons (about 90 dp):
+    // on short screens (small 4:3 handhelds) the small cards shrink rather than clip the title.
+    val smallHeight =
+        if (home) {
+            minOf(bigHeight * 0.48f, bigHeight - gap - HomeInfoMinHeight).coerceAtLeast(bigHeight * 0.32f)
+        } else {
+            bigHeight * 0.55f
+        }
     val smallWidth = smallHeight * LibraryGameCardAspectRatio
     val top = ((maxHeight - bigHeight) / 2).coerceAtLeast(0.dp)
     // Home lines the selected card up with the top bar and console row (leaving room for its ring);

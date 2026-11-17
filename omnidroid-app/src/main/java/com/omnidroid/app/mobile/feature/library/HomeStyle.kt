@@ -138,6 +138,9 @@ private val HomeRingOutset = 3.dp
 /** Room around a card for its selection ring. */
 internal val HomeRingSpace = HomeRingWidth + HomeRingOutset
 
+/** Height the landscape carousel keeps beside the card for title, meta line and buttons. */
+internal val HomeInfoMinHeight = 96.dp
+
 /**
  * Set by the Home layout around the console carousel, which then takes Home's look: 6 dp cards
  * with an accent ring, titles on the side cards, and Home's title, meta line and buttons.
@@ -287,6 +290,10 @@ internal fun Modifier.homeSelectionRing(corner: Dp, amount: () -> Float = { 1f }
     }
 
 /** Home's Row / Grid / List switch, sized to sit in the top bar beside search. */
+/** Width of [HomeViewSwitch]: three segments plus its inset and gaps. */
+@Composable
+internal fun homeViewSwitchWidth(): Dp = chromeButtonSize() * 3.2f + 4.dp
+
 @Composable
 internal fun HomeViewSwitch(
     view: HomeView,
