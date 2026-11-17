@@ -533,8 +533,8 @@ class MainActivity : RetrogradeComponentActivity(), BusyActivity {
                 }
             val portrait = maxHeight > maxWidth
             val portraitColumnWidth = maxWidth
-            val libraryTopPadding =
-                if (portrait) adaptiveSpec.topBarPortraitHeight else adaptiveSpec.topBarRowHeight
+            // The library bar is one row in both orientations.
+            val libraryTopPadding = adaptiveSpec.topBarRowHeight
             val standardTopPadding = adaptiveSpec.topBarRowHeight
             CompositionLocalProvider(
                 LocalControllerNavigation provides controllerNav,

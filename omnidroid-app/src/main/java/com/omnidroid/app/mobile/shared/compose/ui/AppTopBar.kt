@@ -58,6 +58,7 @@ fun AppTopBar(
     leadingContent: (@Composable () -> Unit)? = null,
     trailingContent: (@Composable () -> Unit)? = null,
     bottomContent: (@Composable () -> Unit)? = null,
+    showStatus: Boolean = true,
 ) {
     val spec = LocalAdaptiveLayout.current
     val height by animateDpAsState(
@@ -110,14 +111,21 @@ fun AppTopBar(
                             }
                         }
                     }
-                    SystemStatusIndicators(gamepadConnected = gamepadConnected)
+                    if (showStatus) SystemStatusIndicators(gamepadConnected = gamepadConnected)
                     AnimatedVisibility(
                         visible = controlsVisible && trailingContent != null,
                         enter = fadeIn(tween(200)) + expandHorizontally(tween(300, easing = FastOutSlowInEasing), expandFrom = Alignment.End),
                         exit = fadeOut(tween(200)) + shrinkHorizontally(tween(300, easing = FastOutSlowInEasing), shrinkTowards = Alignment.End),
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Spacer(modifier = Modifier.width(10.dp))
+                            if (showStatus) {
+                                // Separates the status read-outs from the buttons.
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Box(Modifier.width(1.dp).height(24.dp).background(chromeColors.divider))
+                                Spacer(modifier = Modifier.width(12.dp))
+                            } else {
+                                Spacer(modifier = Modifier.width(8.dp))
+                            }
                             trailingContent?.invoke()
                         }
                     }
