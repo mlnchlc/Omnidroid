@@ -13,6 +13,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
+import com.omnidroid.app.mobile.shared.compose.ui.chromeColors
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -50,8 +51,12 @@ fun OmnidroidSettingsList(
     var showDialog by remember { mutableStateOf(false) }
     var pendingSelection by remember(items) { mutableStateOf<Int?>(null) }
 
+    val hasValue = selectedIndex in items.indices
+    // On the Settings screen the current value sits on the right with a chevron, and the row keeps
+    // its description underneath; elsewhere the value replaces the subtitle.
+    val valueAtEnd = LocalSettingsGroupsAsCards.current && hasValue && action == null
     val safeSubtitle =
-        if (selectedIndex in items.indices && useSelectedValueAsSubtitle) {
+        if (hasValue && useSelectedValueAsSubtitle && !valueAtEnd) {
             { Text(text = items[selectedIndex]) }
         } else {
             subtitle
@@ -63,7 +68,20 @@ fun OmnidroidSettingsList(
         icon = icon,
         title = title,
         subtitle = safeSubtitle,
-        action = action,
+        action =
+            if (valueAtEnd) {
+                {
+                    Text(
+                        text = items[selectedIndex] + "  ›",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = chromeColors.muted,
+                        maxLines = 1,
+                        modifier = Modifier.padding(end = 8.dp),
+                    )
+                }
+            } else {
+                action
+            },
         onClick = { pendingSelection = null; showDialog = true },
     )
 
