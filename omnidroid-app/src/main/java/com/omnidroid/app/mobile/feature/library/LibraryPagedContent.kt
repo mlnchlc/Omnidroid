@@ -87,7 +87,8 @@ internal fun LibraryPagedContent(
     BoxWithConstraints(modifier.fillMaxSize()) {
         val vertical = isList || portrait
         val lanes = when {
-            isList -> 1
+            // Two columns of rows in landscape, where one row would be stretched across the screen.
+            isList -> if (portrait) 1 else 2
             portrait -> libraryPortraitColumns(zoomDensity, maxWidth, adaptive.isSquare)
             else -> libraryGridRows(zoomDensity, maxHeight, adaptive.isSquare)
         }
