@@ -71,6 +71,7 @@ import com.omnidroid.app.mobile.feature.gamedetails.GameDetailsViewModel
 import com.omnidroid.app.mobile.feature.library.LibraryFilter
 import com.omnidroid.app.mobile.feature.library.HomeViewCycleButton
 import com.omnidroid.app.mobile.feature.library.HomeViewSwitch
+import com.omnidroid.app.mobile.feature.library.homeViewSwitchWidth
 import com.omnidroid.app.mobile.feature.library.LibraryLayout
 import com.omnidroid.app.mobile.feature.library.LibraryScreen
 import com.omnidroid.app.mobile.feature.library.LibraryStartupStore
@@ -876,8 +877,10 @@ class MainActivity : RetrogradeComponentActivity(), BusyActivity {
                 LibraryTopBar(
                     afterSearch =
                         if (currentRoute == MainRoute.HOME && libraryState.layout == LibraryLayout.HOME) {
-                            {
-                                if (portrait) {
+                            { room ->
+                                // The three-way switch when it fits beside search, else one button
+                                // that steps through the views (portrait, narrow 4:3 screens).
+                                if (portrait || room < homeViewSwitchWidth()) {
                                     HomeViewCycleButton(
                                         view = libraryState.homeView,
                                         onViewChange = { libraryViewModel.setHomeView(it) },

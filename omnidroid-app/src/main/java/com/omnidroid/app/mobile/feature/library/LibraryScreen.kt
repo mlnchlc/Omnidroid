@@ -122,6 +122,8 @@ import com.omnidroid.R
 import com.omnidroid.app.shared.settings.StorageFrameworkPickerLauncher
 import com.omnidroid.app.utils.android.benchmarkTag
 import com.omnidroid.app.mobile.shared.compose.ui.homeChromeBackground
+import com.omnidroid.app.mobile.shared.compose.ui.isTelevision
+import com.omnidroid.app.mobile.shared.compose.ui.TvSafeMargin
 import com.omnidroid.app.mobile.shared.compose.ui.OmnidroidEmptyView
 import com.omnidroid.app.mobile.shared.compose.ui.LocalAdaptiveLayout
 import com.omnidroid.app.mobile.shared.compose.ui.chromeColors
@@ -256,7 +258,9 @@ fun LibraryScreen(
             )
         }
         // Upside-down portrait puts a punch-hole at the bottom, under the console row.
-        val cutoutBottom = with(LocalDensity.current) { WindowInsets.displayCutout.getBottom(this).toDp() }
+        val cutoutBottom =
+            with(LocalDensity.current) { WindowInsets.displayCutout.getBottom(this).toDp() }
+                .let { if (isTelevision()) maxOf(it, TvSafeMargin.vertical) else it }
         if (home) {
             val edges = homeEdgePadding(portrait)
             Column(
