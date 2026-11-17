@@ -100,7 +100,8 @@ fun GameMenuHomeScreen(
             }
             MenuAction(
                 "restart", titleRes = R.string.game_menu_restart,
-                trailing = if (askToConfirm) stringResource(R.string.game_menu_asks_first) else null,
+                // The side panel has room for the note; the portrait sheet keeps rows plain.
+                trailing = if (askToConfirm && !sheet) stringResource(R.string.game_menu_asks_first) else null,
                 icon = { MenuDrawableIcon(R.drawable.ic_menu_restart) },
             ) {
                 if (askToConfirm) confirmRestart = true else onCommand(InGameMenuCommand.Restart)
