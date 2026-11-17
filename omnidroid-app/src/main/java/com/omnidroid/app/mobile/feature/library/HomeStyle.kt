@@ -127,6 +127,9 @@ internal fun homeTextStyle(
 
 internal val HomeTitleSize = 20.sp
 
+/** Label colour on Home's green buttons (dark, for contrast on the accent). */
+internal val HomeOnAccent = Color(0xFF0A0A0A)
+
 /** Card corner shared by every Home view. */
 internal val HomeCardCorner = 6.dp
 private val HomeRingWidth = 3.dp
@@ -206,7 +209,7 @@ internal fun HomeActions(
                     .controllerFocusGlow(CircleShape),
             shape = CircleShape,
             color = LibraryNeonGreen,
-            contentColor = Color(0xFF0A0A0A),
+            contentColor = HomeOnAccent,
         ) {
             Row(
                 modifier = Modifier.padding(horizontal = if (compact) 18.dp else 0.dp),
