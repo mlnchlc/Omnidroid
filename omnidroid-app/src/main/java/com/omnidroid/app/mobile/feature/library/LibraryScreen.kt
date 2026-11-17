@@ -966,8 +966,11 @@ private fun LibraryGames(
         state.filter is LibraryFilter.All &&
             state.searchQuery.isBlank() &&
             continueGame != null
-    LaunchedEffect(requestInitialFocus, games.itemCount, showContinue, state.contentLayout) {
-        if (requestInitialFocus && (games.itemCount > 0 || showContinue)) {
+    // Keyed on "has games", not the count: switching console from the dock changes the count, and
+    // re-focusing the content then would pull a controller out of the dock after every step.
+    val hasContent = games.itemCount > 0 || showContinue
+    LaunchedEffect(requestInitialFocus, hasContent, state.contentLayout) {
+        if (requestInitialFocus && hasContent) {
             runCatching { firstItemRequester.requestFocus() }
         }
     }
