@@ -28,7 +28,10 @@ class StickPressFilter(
     private val holdRepeatMs: Long = 110L,
 ) {
     /** A press in one direction: x or y is -1 or 1, the other 0. */
-    data class Press(val x: Int, val y: Int)
+    data class Press(
+        val x: Int,
+        val y: Int,
+    )
 
     private var heldX = 0
     private var heldY = 0
@@ -123,7 +126,12 @@ class StickPressFilter(
             else -> null
         }
 
-    private fun holdDue(): Long = if (lastRepeatAt == pressedAt) pressedAt + holdDelayMs else lastRepeatAt + holdRepeatMs
+    private fun holdDue(): Long =
+        if (lastRepeatAt == pressedAt) {
+            pressedAt + holdDelayMs
+        } else {
+            lastRepeatAt + holdRepeatMs
+        }
 
     private fun holdRepeat(now: Long): Press? {
         if (now < holdDue()) return null

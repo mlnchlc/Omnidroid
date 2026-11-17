@@ -214,7 +214,10 @@ class ControllerInputBridge {
                     object : Runnable {
                         override fun run() {
                             // Safety cap in case the key-up never arrives (focus moved away).
-                            if (SystemClock.uptimeMillis() - pressedAt > SHOULDER_MAX_HOLD_MS) return stopShoulderRepeat()
+                            if (SystemClock.uptimeMillis() - pressedAt > SHOULDER_MAX_HOLD_MS) {
+                                stopShoulderRepeat()
+                                return
+                            }
                             action()
                             shoulderHandler.postDelayed(this, SHOULDER_REPEAT_MS)
                         }
@@ -288,16 +291,15 @@ class ControllerInputBridge {
             source and InputDevice.SOURCE_DPAD == InputDevice.SOURCE_DPAD
     }
 
-    private fun isBackOrShoulder(keyCode: Int): Boolean {
-        return keyCode == KeyEvent.KEYCODE_BUTTON_B ||
+    private fun isBackOrShoulder(keyCode: Int): Boolean =
+        keyCode == KeyEvent.KEYCODE_BUTTON_B ||
             keyCode == KeyEvent.KEYCODE_BUTTON_2 ||
             keyCode == KeyEvent.KEYCODE_BACK ||
             keyCode == KeyEvent.KEYCODE_BUTTON_L1 ||
             keyCode == KeyEvent.KEYCODE_BUTTON_R1
-    }
 
-    private fun KeyEvent.remap(keyCode: Int): KeyEvent {
-        return KeyEvent(
+    private fun KeyEvent.remap(keyCode: Int): KeyEvent =
+        KeyEvent(
             downTime,
             eventTime,
             action,
@@ -309,7 +311,6 @@ class ControllerInputBridge {
             flags,
             source,
         )
-    }
 
     companion object {
         /** Before the D-pad starts repeating; the system long-press time before Android 9. */
