@@ -1,7 +1,21 @@
 package com.omnidroid.app.mobile.shared.compose.sidemenu
 
 import androidx.annotation.StringRes
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.text.font.FontWeight
+import com.omnidroid.app.mobile.shared.compose.ui.chromeColors
+import com.omnidroid.app.mobile.shared.compose.ui.chromeContentColor
+import com.omnidroid.app.mobile.shared.controller.controllerFocusGlow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -146,3 +160,52 @@ fun SideMenuPageScope.MenuToggle(
 @Composable
 fun SideMenuPageScope.MenuLink(id: String, destination: SideMenuDestination, onNavigate: (SideMenuDestination) -> Unit) =
     MenuAction(id = id, titleRes = destination.titleRes) { onNavigate(destination) }
+
+/** A large square action in a [MenuTiles] row. */
+data class MenuTile(
+    val id: String,
+    val label: String,
+    val icon: @Composable () -> Unit,
+    val highlighted: Boolean = false,
+    val onClick: () -> Unit,
+)
+
+/**
+ * The most-used actions as a row of big tiles, for the portrait sheet where they are easier to
+ * hit than list rows. Each tile is a controller focus target like any other row.
+ */
+@Composable
+fun SideMenuPageScope.MenuTiles(id: String, tiles: List<MenuTile>) {
+    key(id) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            tiles.forEach { tile ->
+                val shape = RoundedCornerShape(12.dp)
+                Surface(
+                    onClick = tile.onClick,
+                    // The focus requester must come before the clickable for focus restore to find it.
+                    modifier = itemModifier(tile.id, true, Modifier.weight(1f).height(76.dp).controllerFocusGlow(shape)),
+                    shape = shape,
+                    color = if (tile.highlighted) chromeColors.gameMenuAccent.copy(alpha = 0.18f) else chromeColors.panelSelected,
+                    contentColor = chromeContentColor,
+                    border = BorderStroke(1.dp, if (tile.highlighted) chromeColors.gameMenuAccent else chromeColors.panelBorder),
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                    ) {
+                        tile.icon()
+                        Text(
+                            tile.label,
+                            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+                            maxLines = 1,
+                            modifier = Modifier.padding(top = 6.dp),
+                        )
+                    }
+                }
+            }
+        }
+    }
+}

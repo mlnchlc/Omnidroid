@@ -7,6 +7,10 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -96,7 +100,7 @@ fun SideMenuScaffold(
                 .focusProperties { canFocus = false }
                 .clickable(remember { MutableInteractionSource() }, indication = null) { state.closeThen() },
         )
-        if (beside != null) {
+        if (beside != null && maxWidth >= maxHeight) {
             Box(
                 modifier =
                     Modifier
@@ -107,40 +111,80 @@ fun SideMenuScaffold(
                 content = beside,
             )
         }
-        AnimatedVisibility(
-            visibleState = transition,
-            modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
-            enter = slideInHorizontally(tween(280, easing = FastOutSlowInEasing)) { it },
-            exit = slideOutHorizontally(tween(220, easing = FastOutSlowInEasing)) { it },
-        ) {
-            Surface(
-                modifier = Modifier.fillMaxHeight().width(sideMenuWidth(maxWidth.value).dp),
-                color = panelColor,
-                contentColor = chromeContentColor,
-                shape = RectangleShape,
-                tonalElevation = 0.dp,
-                shadowElevation = 0.dp,
+        val sheet = maxHeight > maxWidth
+        val panelContent: @Composable () -> Unit = {
+            Column(
+                Modifier.fillMaxSize()
+                    .windowInsetsPadding(
+                        WindowInsets.safeDrawing.only(
+                            if (sheet) WindowInsetsSides.Horizontal else WindowInsetsSides.Top + WindowInsetsSides.End,
+                        ),
+                    )
+                    .padding(bottom = maxOf(bottomReserved, WindowInsets.safeDrawing.asPaddingValues().calculateBottomPadding())),
             ) {
-                Row(Modifier.fillMaxSize()) {
-                    Box(Modifier.width(3.dp).fillMaxHeight().background(chromeColors.gameMenuAccent))
-                    Column(
-                        Modifier.weight(1f).fillMaxHeight()
-                            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.End))
-                            .padding(bottom = maxOf(bottomReserved, WindowInsets.safeDrawing.asPaddingValues().calculateBottomPadding())),
+                if (sheet) {
+                    Box(
+                        Modifier.padding(top = 8.dp).align(Alignment.CenterHorizontally)
+                            .size(width = 40.dp, height = 4.dp)
+                            .background(chromeColors.gameMenuAccent, RoundedCornerShape(2.dp)),
+                    )
+                }
+                SideMenuHeader(title, canGoBack) { if (canGoBack) onBack() else state.closeThen() }
+                Box(Modifier.fillMaxWidth().height(1.dp).background(chromeColors.divider))
+                Box(Modifier.weight(1f).fillMaxWidth()) {
+                    CompositionLocalProvider(
+                        LocalSettingsRowContainerColor provides panelColor,
+                        LocalSideMenuIsSheet provides sheet,
                     ) {
-                        SideMenuHeader(title, canGoBack) { if (canGoBack) onBack() else state.closeThen() }
-                        Box(Modifier.fillMaxWidth().height(1.dp).background(chromeColors.divider))
-                        Box(Modifier.weight(1f).fillMaxWidth()) {
-                            CompositionLocalProvider(LocalSettingsRowContainerColor provides panelColor) {
-                                content()
-                            }
-                        }
+                        content()
+                    }
+                }
+            }
+        }
+        if (sheet) {
+            // Portrait: a bottom sheet over the on-screen controls, so the game stays visible above.
+            AnimatedVisibility(
+                visibleState = transition,
+                modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth(),
+                enter = slideInVertically(tween(280, easing = FastOutSlowInEasing)) { it },
+                exit = slideOutVertically(tween(220, easing = FastOutSlowInEasing)) { it },
+            ) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth().height(sideMenuSheetHeight(maxHeight.value).dp),
+                    color = panelColor,
+                    contentColor = chromeContentColor,
+                    shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+                    tonalElevation = 0.dp,
+                    shadowElevation = 0.dp,
+                ) { panelContent() }
+            }
+        } else {
+            AnimatedVisibility(
+                visibleState = transition,
+                modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
+                enter = slideInHorizontally(tween(280, easing = FastOutSlowInEasing)) { it },
+                exit = slideOutHorizontally(tween(220, easing = FastOutSlowInEasing)) { it },
+            ) {
+                Surface(
+                    modifier = Modifier.fillMaxHeight().width(sideMenuWidth(maxWidth.value).dp),
+                    color = panelColor,
+                    contentColor = chromeContentColor,
+                    shape = RectangleShape,
+                    tonalElevation = 0.dp,
+                    shadowElevation = 0.dp,
+                ) {
+                    Row(Modifier.fillMaxSize()) {
+                        Box(Modifier.width(3.dp).fillMaxHeight().background(chromeColors.gameMenuAccent))
+                        Box(Modifier.weight(1f).fillMaxHeight()) { panelContent() }
                     }
                 }
             }
         }
     }
 }
+
+/** True when the menu shows as a portrait bottom sheet rather than a side panel. */
+val LocalSideMenuIsSheet = staticCompositionLocalOf { false }
 
 @Composable
 private fun SideMenuHeader(title: String, canGoBack: Boolean, onClick: () -> Unit) {
