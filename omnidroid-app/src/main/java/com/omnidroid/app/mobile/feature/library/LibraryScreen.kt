@@ -673,7 +673,7 @@ private fun HomeConsoleRow(
     val labelText: @Composable (Modifier) -> Unit = { modifier ->
         Text(
             text = label,
-            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+            style = homeTextStyle(FontWeight.SemiBold),
             color = chromeColors.content,
             maxLines = 1,
             modifier = modifier,
