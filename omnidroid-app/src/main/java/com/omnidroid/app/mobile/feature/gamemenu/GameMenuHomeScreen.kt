@@ -18,7 +18,10 @@ import com.omnidroid.app.mobile.feature.gamemenu.tilt.TiltConfigurationMenuEntry
 import com.omnidroid.app.mobile.shared.compose.gamemenu.MenuDrawableIcon
 import com.omnidroid.app.mobile.shared.compose.gamemenu.FrameSpeedMenuChoice
 import com.omnidroid.app.mobile.shared.compose.gamemenu.CloudSaveMenuChoice
+import com.omnidroid.app.mobile.shared.compose.sidemenu.LocalSideMenuIsSheet
 import com.omnidroid.app.mobile.shared.compose.sidemenu.MenuOption
+import com.omnidroid.app.mobile.shared.compose.sidemenu.MenuTile
+import com.omnidroid.app.mobile.shared.compose.sidemenu.MenuTiles
 import com.omnidroid.app.mobile.shared.compose.sidemenu.SideMenuPage
 import com.omnidroid.app.mobile.shared.compose.sidemenu.MenuSection
 import com.omnidroid.app.mobile.shared.compose.sidemenu.MenuAction
@@ -51,13 +54,39 @@ fun GameMenuHomeScreen(
     val hasSettings = request.advancedCoreOptions.isNotEmpty() || request.coreOptions.isNotEmpty() ||
         request.coreConfig.controllerConfigs.values.any { it.size >= 2 }
     val hasControls = request.editTouchControlsSupported || saveSyncSupported || hasSettings || request.allTiltConfigurations.isNotEmpty()
+    val sheet = LocalSideMenuIsSheet.current
+    val statesSupported = request.coreConfig.statesSupported
+    val resumeLabel = stringResource(R.string.game_menu_resume)
+    val saveLabel = stringResource(R.string.game_menu_save)
+    val loadLabel = stringResource(R.string.game_menu_load)
+    val quitLabel = stringResource(R.string.game_menu_quit)
     SideMenuPage("game-home") {
+        if (sheet) {
+            // Portrait sheet: the four most-used actions as big tiles, Resume first and highlighted.
+            MenuTiles(
+                "quick",
+                listOfNotNull(
+                    MenuTile("resume", resumeLabel, { Icon(Icons.Filled.PlayArrow, contentDescription = null) }, highlighted = true, onClick = onResume),
+                    MenuTile("save", saveLabel, { MenuDrawableIcon(R.drawable.ic_menu_save) }) {
+                        navController.navigateToRoute(GameMenuRoute.SAVE)
+                    }.takeIf { statesSupported },
+                    MenuTile("load", loadLabel, { MenuDrawableIcon(R.drawable.ic_menu_load) }) {
+                        navController.navigateToRoute(GameMenuRoute.LOAD)
+                    }.takeIf { statesSupported },
+                    MenuTile("quit", quitLabel, { MenuDrawableIcon(R.drawable.ic_menu_quit) }) {
+                        onCommand(InGameMenuCommand.Quit)
+                    },
+                ),
+            )
+        }
         MenuSection("commands") {
             // First, so A on opening the menu by mistake goes straight back to the game.
-            MenuAction("resume", titleRes = R.string.game_menu_resume, icon = { Icon(Icons.Filled.PlayArrow, contentDescription = null) }) {
-                onResume()
+            if (!sheet) {
+                MenuAction("resume", titleRes = R.string.game_menu_resume, icon = { Icon(Icons.Filled.PlayArrow, contentDescription = null) }) {
+                    onResume()
+                }
             }
-            if (request.coreConfig.statesSupported) {
+            if (statesSupported && !sheet) {
                 MenuAction("save", titleRes = R.string.game_menu_save, icon = { MenuDrawableIcon(R.drawable.ic_menu_save) }) {
                     navController.navigateToRoute(GameMenuRoute.SAVE)
                 }
@@ -68,8 +97,10 @@ fun GameMenuHomeScreen(
             MenuAction("restart", titleRes = R.string.game_menu_restart, icon = { MenuDrawableIcon(R.drawable.ic_menu_restart) }) {
                 if (askToConfirm) confirmRestart = true else onCommand(InGameMenuCommand.Restart)
             }
-            MenuAction("quit", titleRes = R.string.game_menu_quit, icon = { MenuDrawableIcon(R.drawable.ic_menu_quit) }) {
-                onCommand(InGameMenuCommand.Quit)
+            if (!sheet) {
+                MenuAction("quit", titleRes = R.string.game_menu_quit, icon = { MenuDrawableIcon(R.drawable.ic_menu_quit) }) {
+                    onCommand(InGameMenuCommand.Quit)
+                }
             }
         }
         MenuSection("playback") {
