@@ -8,9 +8,11 @@ import kotlin.math.sign
  *
  * - One tilt is one press: it presses at [pressThreshold] and only lets go below [releaseThreshold],
  *   so a stick hovering near the edge doesn't press again and again.
- * - The spring back past the centre after letting go reads as the opposite direction. A rebound is
- *   quick and shallow, so an opposite tilt within [reboundMs] that stays under [reboundMaxLean] is
- *   ignored (a flick forth and back counts once); a deliberate flick back goes further and counts.
+ * - Telling the spring back from a deliberate reverse: letting go is as fast as a flick, so speed
+ *   alone can't. What differs is what follows. A spring overshoot is shallow and comes straight back;
+ *   a thumb reversing keeps going and stays out. So an opposite tilt within [reboundMs] of letting go
+ *   waits: it presses at once if it goes deep ([reverseDeepLean]), presses if it stays out for
+ *   [reverseConfirmMs] (see [tick]), and is dropped as a rebound if it falls back first.
  * - Holding the stick repeats, but only after [holdDelayMs], every [holdRepeatMs].
  *
  * Pure (time is passed in) so it can be unit tested.
@@ -19,7 +21,8 @@ class StickPressFilter(
     private val pressThreshold: Float = 0.6f,
     private val releaseThreshold: Float = 0.3f,
     private val reboundMs: Long = 150L,
-    private val reboundMaxLean: Float = 0.85f,
+    private val reverseDeepLean: Float = 0.85f,
+    val reverseConfirmMs: Long = 40L,
     private val holdDelayMs: Long = 550L,
     private val holdRepeatMs: Long = 180L,
 ) {
@@ -34,12 +37,22 @@ class StickPressFilter(
     private var releasedY = 0
     private var releasedAt = Long.MIN_VALUE / 2
 
+    // An opposite tilt right after letting go, waiting to show whether it is a rebound.
+    private var pendingX = 0
+    private var pendingY = 0
+    private var pendingSince = 0L
+
     /** The stick is held in a direction (past the press threshold, not yet released). */
     val engaged: Boolean get() = heldX != 0 || heldY != 0
+
+    /** A possible reverse is waiting; call [tick] after [reverseConfirmMs] if no event comes. */
+    val pending: Boolean get() = pendingX != 0 || pendingY != 0
 
     fun reset() {
         heldX = 0
         heldY = 0
+        pendingX = 0
+        pendingY = 0
     }
 
     /** Feeds the stick position; returns a press to dispatch, or null. */
@@ -55,7 +68,8 @@ class StickPressFilter(
                 releasedX = heldX
                 releasedY = heldY
                 releasedAt = now
-                reset()
+                heldX = 0
+                heldY = 0
                 return null
             }
             if (now - pressedAt >= holdDelayMs && now - lastRepeatAt >= holdRepeatMs) {
@@ -64,15 +78,52 @@ class StickPressFilter(
             }
             return null
         }
+        if (pending) {
+            val lean = if (pendingX != 0) x * pendingX else y * pendingY
+            return when {
+                lean < releaseThreshold -> {
+                    // Came straight back: it was the spring overshooting.
+                    pendingX = 0
+                    pendingY = 0
+                    null
+                }
+                lean >= reverseDeepLean || now - pendingSince >= reverseConfirmMs -> confirmPending(now)
+                else -> null
+            }
+        }
         val ax = abs(x)
         val ay = abs(y)
         if (maxOf(ax, ay) < pressThreshold) return null
         // One direction only: the stronger axis, so a diagonal doesn't press twice.
         val dx = if (ax >= ay) sign(x).toInt() else 0
         val dy = if (ax >= ay) 0 else sign(y).toInt()
-        val sinceRelease = now - releasedAt
         val opposite = dx == -releasedX && dy == -releasedY
-        if (opposite && sinceRelease < reboundMs && maxOf(ax, ay) < reboundMaxLean) return null
+        if (opposite && now - releasedAt < reboundMs && maxOf(ax, ay) < reverseDeepLean) {
+            pendingX = dx
+            pendingY = dy
+            pendingSince = now
+            return null
+        }
+        return press(dx, dy, now)
+    }
+
+    /** Time passing with no new stick event: confirms a reverse that stayed out long enough. */
+    fun tick(now: Long): Press? =
+        if (pending && now - pendingSince >= reverseConfirmMs) confirmPending(now) else null
+
+    private fun confirmPending(now: Long): Press {
+        val dx = pendingX
+        val dy = pendingY
+        pendingX = 0
+        pendingY = 0
+        return press(dx, dy, now)
+    }
+
+    private fun press(
+        dx: Int,
+        dy: Int,
+        now: Long,
+    ): Press {
         heldX = dx
         heldY = dy
         pressedAt = now
