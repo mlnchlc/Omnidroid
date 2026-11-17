@@ -253,11 +253,14 @@ fun LibraryScreen(
                         .bleedTop(backdropTopBleed),
             )
         }
+        // Upside-down portrait puts a punch-hole at the bottom, under the console row.
+        val cutoutBottom = with(LocalDensity.current) { WindowInsets.displayCutout.getBottom(this).toDp() }
         if (home) {
             val edges = homeEdgePadding(portrait)
             Column(
                 modifier =
                     Modifier
+                        .padding(bottom = cutoutBottom)
                         .then(
                             if (portrait && portraitColumnWidth != Dp.Unspecified) {
                                 Modifier.width(portraitColumnWidth)
@@ -307,6 +310,7 @@ fun LibraryScreen(
             Column(
                 modifier =
                     Modifier
+                        .padding(bottom = cutoutBottom)
                         .then(
                             if (portraitColumnWidth != Dp.Unspecified) {
                                 Modifier.width(portraitColumnWidth)
@@ -983,19 +987,18 @@ private fun LibraryGames(
                             )
                         } else if (state.contentLayout == LibraryLayout.HOME) {
                             val edges = homeEdges ?: HomeEdges(contentEdge(portrait), contentEdge(portrait))
-                            // A new dataset needs a new row, as for the paged layouts: the row's item
-                            // keys would otherwise be read against a shorter list mid-update.
-                            key(state.filter, state.searchQuery, state.sort) {
-                                HomeLibrary(
-                                    modifier = Modifier.fillMaxSize(),
+                            // Home's Row view is the console carousel in Home's look, kept between
+                            // Home's top bar and console row and clear of a cutout.
+                            CompositionLocalProvider(LocalHomeCarouselStyle provides true) {
+                                ConsoleLibrary(
+                                    modifier = Modifier.fillMaxSize().padding(start = edges.start, end = edges.end),
                                     sharedTransitionScope = sharedTransitionScope,
                                     animatedVisibilityScope = animatedVisibilityScope,
                                     games = games,
                                     featured = featured,
                                     selection = consoleSelection,
                                     portrait = portrait,
-                                    startPadding = edges.start,
-                                    endPadding = edges.end,
+                                    showControllerGlyph = requestInitialFocus,
                                     focusRequester = firstItemRequester,
                                     onOpenGame = onGameClick,
                                     onOpenContinueGame = onOpenContinueGame,
@@ -1003,7 +1006,6 @@ private fun LibraryGames(
                                     onGameLongClick = onGameLongClick,
                                     onFavoriteToggle = onFavoriteToggle,
                                     onBackdropGameChange = onBackdropGameChange,
-                                    showControllerGlyph = requestInitialFocus,
                                 )
                             }
                         } else {
