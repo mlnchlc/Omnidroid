@@ -87,6 +87,9 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -660,6 +663,10 @@ private fun HomeConsoleRow(
     val adaptiveSpec =
         baseSpec.copy(sidebarButtonSize = buttonSize, sidebarIconSize = buttonSize * 0.45f)
     val listState = rememberLazyListState()
+    // A controller entering the dock lands on the console that is showing, not whichever button
+    // happens to sit under the previous focus.
+    val selectedRequester = remember { FocusRequester() }
+    fun Modifier.entry(selected: Boolean): Modifier = if (selected) focusRequester(selectedRequester) else this
     val label =
         when (filter) {
             is LibraryFilter.Favorites -> stringResource(R.string.favorites)
@@ -680,6 +687,8 @@ private fun HomeConsoleRow(
             style = homeTextStyle(FontWeight.SemiBold),
             color = chromeColors.content,
             maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = if (portrait) TextAlign.Start else TextAlign.End,
             modifier = modifier,
         )
     }
@@ -687,15 +696,18 @@ private fun HomeConsoleRow(
         LazyRow(
             state = listState,
             modifier =
-                modifier.dockEdgeFade(
-                    horizontal = true,
-                    fadeStart = { listState.canScrollBackward },
-                    fadeEnd = { listState.canScrollForward },
-                ),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                modifier
+                    .focusProperties { onEnter = { selectedRequester.requestFocus() } }
+                    .dockEdgeFade(
+                        horizontal = true,
+                        fadeStart = { listState.canScrollBackward },
+                        fadeEnd = { listState.canScrollForward },
+                    ),
+            horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             item(key = "favorites") {
+                Box(Modifier.entry(filter is LibraryFilter.Favorites)) {
                 SidebarIconButton(
                     selected = filter is LibraryFilter.Favorites,
                     icon = if (filter is LibraryFilter.Favorites) WireframeIcons.HeartFilled else WireframeIcons.Heart,
@@ -703,19 +715,23 @@ private fun HomeConsoleRow(
                     onClick = { onFilterSelected(LibraryFilter.Favorites) },
                     pinned = startupFilter is LibraryFilter.Favorites,
                 )
+                }
             }
             item(key = "all") {
+                Box(Modifier.entry(filter is LibraryFilter.All)) {
                 SidebarIconButton(
                     selected = filter is LibraryFilter.All,
                     icon = WireframeIcons.AllGames,
                     contentDescription = stringResource(R.string.show_all),
                     onClick = { onFilterSelected(LibraryFilter.All) },
                 )
+                }
             }
             item(key = "divider") {
                 Box(Modifier.width(1.dp).height(28.dp * adaptiveSpec.uiScale).background(chromeColors.divider))
             }
             items(systems, key = { it.name }) { system ->
+                Box(Modifier.entry((filter as? LibraryFilter.System)?.metaSystemID == system)) {
                 SidebarSystemLogoButton(
                     meta = system,
                     selected = (filter as? LibraryFilter.System)?.metaSystemID == system,
@@ -723,6 +739,7 @@ private fun HomeConsoleRow(
                     onClick = { onFilterSelected(LibraryFilter.System(system)) },
                     onLongClick = { onConsoleLongClick(system) },
                 )
+                }
             }
             item(key = "add_console") {
                 SidebarIconButton(
@@ -753,12 +770,17 @@ private fun HomeConsoleRow(
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            row(Modifier.weight(1f, fill = false))
-            labelText(Modifier.padding(start = 16.dp))
+            // The label gets a fixed slot, so the console buttons don't shift as it changes
+            // ("All games", "N64 · 12", ...).
+            row(Modifier.weight(1f))
+            labelText(Modifier.padding(start = 16.dp).width(DockLabelWidth * adaptiveSpec.uiScale))
         }
     }
     }
 }
+
+/** Landscape Home dock: room for the longest usual label, e.g. "Favourites" or "PSP · 1234". */
+private val DockLabelWidth = 112.dp
 
 @Composable
 internal fun PortraitConsoleBar(
@@ -993,7 +1015,11 @@ private fun LibraryGames(
                             val edges = homeEdges ?: HomeEdges(contentEdge(portrait), contentEdge(portrait))
                             // Home's Row view is the console carousel in Home's look, kept between
                             // Home's top bar and console row and clear of a cutout.
-                            CompositionLocalProvider(LocalHomeCarouselStyle provides true) {
+                            val carouselActionFocus = remember(firstItemRequester) { CarouselActionFocus(FocusRequester(), firstItemRequester) }
+                            CompositionLocalProvider(
+                                LocalHomeCarouselStyle provides true,
+                                LocalCarouselActionFocus provides carouselActionFocus,
+                            ) {
                                 ConsoleLibrary(
                                     modifier = Modifier.fillMaxSize().padding(start = edges.start, end = edges.end),
                                     sharedTransitionScope = sharedTransitionScope,
