@@ -13,6 +13,8 @@ import com.omnidroid.app.shared.settings.rememberHdModeAllowed
 import com.omnidroid.app.utils.android.settings.OmnidroidSettingsGroup
 import com.omnidroid.app.utils.android.settings.OmnidroidSettingsList
 import com.omnidroid.app.utils.android.settings.OmnidroidSettingsMenuLink
+import com.omnidroid.app.utils.android.settings.OmnidroidSettingsSegmented
+import com.omnidroid.app.utils.android.settings.SettingsHorizontalDivider
 import com.omnidroid.app.utils.android.settings.OmnidroidSettingsSlider
 import com.omnidroid.app.utils.android.settings.OmnidroidSettingsSwitch
 import com.omnidroid.app.utils.android.settings.booleanPreferenceState
@@ -39,8 +41,8 @@ internal fun DisplaySettings(navController: NavController) {
         }
     }
 
-    OmnidroidSettingsGroup {
-        OmnidroidSettingsList(
+    OmnidroidSettingsGroup(titleRes = R.string.settings_section_appearance) {
+        OmnidroidSettingsSegmented(
             state =
                 indexPreferenceState(
                     R.string.pref_key_app_theme,
@@ -49,6 +51,11 @@ internal fun DisplaySettings(navController: NavController) {
                 ),
             titleRes = R.string.settings_title_app_theme,
             items = stringListResource(R.array.pref_key_app_theme_display_names),
+        )
+        OmnidroidSettingsSwitch(
+            state = immersiveMode,
+            titleRes = R.string.settings_title_immersive_mode,
+            subtitleRes = R.string.settings_description_immersive_mode,
         )
         OmnidroidSettingsMenuLink(
             titleRes = R.string.settings_title_button_ui_scale,
@@ -63,11 +70,9 @@ internal fun DisplaySettings(navController: NavController) {
             },
             onClick = { navController.navigateToRoute(MainRoute.SETTINGS_UI_SCALE) },
         )
-        OmnidroidSettingsSwitch(
-            state = immersiveMode,
-            titleRes = R.string.settings_title_immersive_mode,
-            subtitleRes = R.string.settings_description_immersive_mode,
-        )
+    }
+    SettingsHorizontalDivider()
+    OmnidroidSettingsGroup(titleRes = R.string.settings_section_game_screen) {
         OmnidroidSettingsSwitch(
             enabled = hdModeAllowed,
             state = hdMode,

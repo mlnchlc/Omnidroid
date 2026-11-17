@@ -859,6 +859,13 @@ class MainActivity : RetrogradeComponentActivity(), BusyActivity {
 
             if (currentRoute != MainRoute.SETTINGS_UI_SCALE) {
                 LibraryTopBar(
+                    pageTitle =
+                        when (currentRoute) {
+                            MainRoute.SETTINGS -> stringResource(R.string.settings)
+                            MainRoute.PROFILE -> stringResource(R.string.title_profile)
+                            MainRoute.ADD_CONSOLES -> stringResource(R.string.title_add_console)
+                            else -> null
+                        },
                     modifier = Modifier.fillMaxSize(),
                     bottomPadding = padding.calculateBottomPadding(),
                     syncProgress = libraryState.syncProgress,

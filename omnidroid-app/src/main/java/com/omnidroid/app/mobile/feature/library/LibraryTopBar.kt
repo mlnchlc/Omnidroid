@@ -141,6 +141,8 @@ fun LibraryTopBar(
     onBackPressed: (() -> Unit)? = null,
     /** Shown right after search in landscape, in place of the console name (Home's view switch). */
     afterSearch: (@Composable () -> Unit)? = null,
+    /** Title beside Back on pages other than the library. */
+    pageTitle: String? = null,
 ) {
     val spec = LocalAdaptiveLayout.current
     val chromeIconSize = 20.dp * spec.uiScale
@@ -234,6 +236,7 @@ fun LibraryTopBar(
             controlsVisible = showLibraryControls,
             // Status (Wi-Fi, battery, time) has no room beside search and the buttons in portrait.
             showStatus = !(portrait && showLibraryControls),
+            title = pageTitle,
             leadingContent = {
                 if (portrait) {
                     // One row, as in landscape: logo, search, then the round buttons.
