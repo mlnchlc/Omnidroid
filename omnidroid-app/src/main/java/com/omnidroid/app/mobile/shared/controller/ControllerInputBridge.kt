@@ -1,5 +1,7 @@
 package com.omnidroid.app.mobile.shared.controller
 
+import android.os.Handler
+import android.os.Looper
 import android.os.SystemClock
 import android.view.InputDevice
 import android.view.KeyEvent
@@ -11,9 +13,9 @@ class ControllerInputBridge {
 
     private val activeNavigation get() = navigation?.modalNavigation ?: navigation
 
-    private var lastX = 0
-    private var lastY = 0
-    private var lastRepeatAt = 0L
+    private val stick = StickPressFilter()
+    private var lastHatX = 0f
+    private var lastHatY = 0f
     private var lastL2Pressed = false
     private var lastR2Pressed = false
     private var lastZoomAt = 0L
@@ -79,15 +81,11 @@ class ControllerInputBridge {
                 true
             }
             KeyEvent.KEYCODE_BUTTON_L1 -> {
-                if (event.action == KeyEvent.ACTION_UP) {
-                    activeNavigation?.onPrevConsole?.invoke()
-                }
+                shoulder(event) { activeNavigation?.onPrevConsole?.invoke() }
                 true
             }
             KeyEvent.KEYCODE_BUTTON_R1 -> {
-                if (event.action == KeyEvent.ACTION_UP) {
-                    activeNavigation?.onNextConsole?.invoke()
-                }
+                shoulder(event) { activeNavigation?.onNextConsole?.invoke() }
                 true
             }
             else -> dispatch(event)
@@ -108,8 +106,11 @@ class ControllerInputBridge {
         val hatX = event.getAxisValue(MotionEvent.AXIS_HAT_X)
         val hatY = event.getAxisValue(MotionEvent.AXIS_HAT_Y)
         val hatActive = abs(hatX) > HAT_DEADZONE || abs(hatY) > HAT_DEADZONE
-        val x = if (hatActive) 0 else axisDirection(0f, event.getAxisValue(MotionEvent.AXIS_X))
-        val y = if (hatActive) 0 else axisDirection(0f, event.getAxisValue(MotionEvent.AXIS_Y))
+        // The D-pad (hat) is left to Android, which turns it into D-pad keys; that includes the
+        // event where it returns to the centre, or the synthesized key would stay down.
+        val hatChanged = hatX != lastHatX || hatY != lastHatY
+        lastHatX = hatX
+        lastHatY = hatY
 
         val l2 =
             maxOf(
@@ -132,26 +133,62 @@ class ControllerInputBridge {
         lastL2Pressed = l2Pressed
         lastR2Pressed = r2Pressed
 
-        val now = SystemClock.uptimeMillis()
-        val changed = x != lastX || y != lastY
-        val shouldRepeat =
-            (x != 0 || y != 0) && now - lastRepeatAt >= STICK_REPEAT_MS
-
-        if (!changed && !shouldRepeat) {
-            return l2Pressed || r2Pressed
+        if (hatActive || hatChanged) {
+            stick.reset()
+            return false
         }
 
-        if (changed) {
-            if (lastX != 0) dispatchDirectional(lastX, 0, KeyEvent.ACTION_UP, event, dispatch)
-            if (lastY != 0) dispatchDirectional(0, lastY, KeyEvent.ACTION_UP, event, dispatch)
-            lastX = x
-            lastY = y
+        // Left stick: one press per tilt (see StickPressFilter). Every stick event is consumed, so
+        // Android doesn't also turn the stick into D-pad keys with its own repeat (extra jumps).
+        val press =
+            stick.update(
+                event.getAxisValue(MotionEvent.AXIS_X),
+                event.getAxisValue(MotionEvent.AXIS_Y),
+                SystemClock.uptimeMillis(),
+            )
+        if (press != null) {
+            dispatchDirectional(press.x, press.y, KeyEvent.ACTION_DOWN, event, dispatch)
+            dispatchDirectional(press.x, press.y, KeyEvent.ACTION_UP, event, dispatch)
         }
-
-        if (x != 0) dispatchDirectional(x, 0, KeyEvent.ACTION_DOWN, event, dispatch)
-        if (y != 0) dispatchDirectional(0, y, KeyEvent.ACTION_DOWN, event, dispatch)
-        lastRepeatAt = now
         return true
+    }
+
+    private val shoulderHandler = Handler(Looper.getMainLooper())
+    private var shoulderRepeat: Runnable? = null
+
+    /**
+     * L1 / R1: act on press, then keep cycling while held (after [SHOULDER_HOLD_MS], every
+     * [SHOULDER_REPEAT_MS]). Android's own key repeats are ignored in favour of this timing.
+     */
+    private fun shoulder(
+        event: KeyEvent,
+        action: () -> Unit,
+    ) {
+        when (event.action) {
+            KeyEvent.ACTION_DOWN -> {
+                if (event.repeatCount > 0) return
+                stopShoulderRepeat()
+                action()
+                val pressedAt = SystemClock.uptimeMillis()
+                val repeat =
+                    object : Runnable {
+                        override fun run() {
+                            // Safety cap in case the key-up never arrives (focus moved away).
+                            if (SystemClock.uptimeMillis() - pressedAt > SHOULDER_MAX_HOLD_MS) return stopShoulderRepeat()
+                            action()
+                            shoulderHandler.postDelayed(this, SHOULDER_REPEAT_MS)
+                        }
+                    }
+                shoulderRepeat = repeat
+                shoulderHandler.postDelayed(repeat, SHOULDER_HOLD_MS)
+            }
+            KeyEvent.ACTION_UP -> stopShoulderRepeat()
+        }
+    }
+
+    private fun stopShoulderRepeat() {
+        shoulderRepeat?.let(shoulderHandler::removeCallbacks)
+        shoulderRepeat = null
     }
 
     private fun zoomIn() {
@@ -202,18 +239,6 @@ class ControllerInputBridge {
         )
     }
 
-    private fun axisDirection(
-        hat: Float,
-        stick: Float,
-    ): Int {
-        val value = if (abs(hat) > HAT_DEADZONE) hat else stick
-        return when {
-            value <= -STICK_DEADZONE -> -1
-            value >= STICK_DEADZONE -> 1
-            else -> 0
-        }
-    }
-
     private fun isFromController(event: KeyEvent): Boolean {
         val source = event.source
         return source and InputDevice.SOURCE_GAMEPAD == InputDevice.SOURCE_GAMEPAD ||
@@ -247,7 +272,9 @@ class ControllerInputBridge {
     companion object {
         private const val HAT_DEADZONE = 0.5f
         private const val STICK_DEADZONE = 0.6f
-        private const val STICK_REPEAT_MS = 220L
+        private const val SHOULDER_HOLD_MS = 450L
+        private const val SHOULDER_REPEAT_MS = 220L
+        private const val SHOULDER_MAX_HOLD_MS = 10_000L
         private const val ZOOM_COOLDOWN_MS = 280L
     }
 }
