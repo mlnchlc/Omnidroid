@@ -143,8 +143,11 @@ fun LibraryTopBar(
     portrait: Boolean = false,
     showLibraryControls: Boolean = true,
     onBackPressed: (() -> Unit)? = null,
-    /** Shown right after search in landscape, in place of the console name (Home's view switch). */
-    afterSearch: (@Composable () -> Unit)? = null,
+    /**
+     * Shown right after search (Home's view switch). Gets the width left beside the narrowest
+     * usable search box, so it can pick a smaller form; 0 in portrait, where there is none.
+     */
+    afterSearch: (@Composable (room: Dp) -> Unit)? = null,
     /** Title beside Back on pages other than the library. */
     pageTitle: String? = null,
 ) {
@@ -275,13 +278,16 @@ fun LibraryTopBar(
     }
 }
 
+/** Narrowest landscape search box that still shows its icon, a few letters and the sort button. */
+private val MinSearchWidth = 132.dp
+
 @Composable
 private fun LibrarySearchRow(
     expanded: Boolean,
     consoleTitleId: Int?,
     consoleGameCount: Int?,
     searchField: @Composable (Modifier) -> Unit,
-    afterSearch: (@Composable () -> Unit)? = null,
+    afterSearch: (@Composable (room: Dp) -> Unit)? = null,
 ) {
     val spec = LocalAdaptiveLayout.current
     // Keep the last label available while its exit animation finishes.
@@ -298,11 +304,14 @@ private fun LibrarySearchRow(
             animationSpec = tween(240, easing = FastOutSlowInEasing),
             label = "librarySearchWidth",
         )
+        val roomAfterSearch = (maxWidth - MinSearchWidth - 10.dp).coerceAtLeast(0.dp)
         Row(modifier = Modifier.fillMaxWidth().clipToBounds(), verticalAlignment = Alignment.CenterVertically) {
-            searchField(Modifier.width(searchWidth))
+            // With something after it, search gives up width first so that stays whole on narrow
+            // (4:3) screens.
+            searchField(if (afterSearch != null) Modifier.weight(1f, fill = false).width(searchWidth) else Modifier.width(searchWidth))
             if (afterSearch != null && !expanded) {
                 Spacer(modifier = Modifier.width(10.dp))
-                afterSearch()
+                afterSearch(roomAfterSearch)
             }
             AnimatedVisibility(
                 visible = !expanded && consoleTitleId != null && afterSearch == null,
