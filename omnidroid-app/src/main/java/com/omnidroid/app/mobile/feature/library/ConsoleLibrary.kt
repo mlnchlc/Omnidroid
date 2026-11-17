@@ -506,6 +506,8 @@ private fun ConsoleLandscapeCarousel(
                             game = game,
                             renderWidth = metrics.bigWidth,
                             renderHeight = metrics.bigHeight,
+                            // Too narrow for a legible caption on short screens (small 4:3).
+                            caption = metrics.smallWidth >= 56.dp,
                             focus = {
                                 if (coverTransitioning) 0f else state.focusOf(index)
                             },
@@ -592,6 +594,7 @@ private fun ConsoleLandscapeCard(
     game: Game?,
     renderWidth: Dp,
     renderHeight: Dp,
+    caption: Boolean,
     focus: () -> Float,
     pulse: State<Float>,
     sharedModifier: Modifier,
@@ -625,7 +628,7 @@ private fun ConsoleLandscapeCard(
             aspectRatio = null,
         )
         if (home) {
-            HomeCardCaption(
+            if (caption) HomeCardCaption(
                 game = game,
                 modifier = Modifier.align(Alignment.BottomCenter).graphicsLayer { alpha = 1f - focus() },
             )
