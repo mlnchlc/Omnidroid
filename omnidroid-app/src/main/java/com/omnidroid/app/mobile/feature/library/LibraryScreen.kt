@@ -1,6 +1,8 @@
 package com.omnidroid.app.mobile.feature.library
 
 import com.omnidroid.app.mobile.shared.compose.ui.libraryAccentColor
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.focus.FocusDirection
 import android.content.Context
 import androidx.activity.compose.ReportDrawnWhen
 import androidx.compose.animation.AnimatedVisibilityScope
@@ -266,6 +268,8 @@ fun LibraryScreen(
                 .let { if (isTelevision()) maxOf(it, TvSafeMargin.vertical) else it }
         if (home) {
             val edges = homeEdgePadding(portrait)
+            // The carousel's Start button: Up from the dock goes there before the carousel.
+            val homeActionsRequester = remember { FocusRequester() }
             Column(
                 modifier =
                     Modifier
@@ -303,8 +307,10 @@ fun LibraryScreen(
                     portrait = portrait,
                     showViewBar = false,
                     homeEdges = edges,
+                    homeActionsRequester = homeActionsRequester,
                 )
                 HomeConsoleRow(
+                    upTarget = homeActionsRequester,
                     filter = state.filter,
                     systems = state.sidebarSystems,
                     selectedGameCount = state.selectedSystemGameCount,
@@ -654,6 +660,7 @@ internal fun SidebarSystemLogoButton(
  */
 @Composable
 private fun HomeConsoleRow(
+    upTarget: FocusRequester?,
     filter: LibraryFilter,
     systems: List<MetaSystemID>,
     selectedGameCount: Int?,
@@ -673,7 +680,10 @@ private fun HomeConsoleRow(
     // A controller entering the dock lands on the console that is showing, not whichever button
     // happens to sit under the previous focus.
     val selectedRequester = remember { FocusRequester() }
-    fun Modifier.entry(selected: Boolean): Modifier = if (selected) focusRequester(selectedRequester) else this
+    // With a controller the dock has one highlight: moving along it switches console, as L1/R1 do.
+    fun Modifier.entry(selected: Boolean, filter: LibraryFilter): Modifier =
+        (if (selected) focusRequester(selectedRequester) else this)
+            .onFocusChanged { if (it.hasFocus && !selected) onFilterSelected(filter) }
     val label =
         when (filter) {
             is LibraryFilter.Favorites -> stringResource(R.string.favorites)
@@ -684,9 +694,19 @@ private fun HomeConsoleRow(
             else -> stringResource(R.string.home_all_games)
         }
     val selectedSystemIndex = (filter as? LibraryFilter.System)?.let { systems.indexOf(it.metaSystemID) } ?: -1
-    LaunchedEffect(selectedSystemIndex, systems.size) {
-        // The list starts with Favorites, All and the divider.
-        if (selectedSystemIndex >= 0) runCatching { listState.animateScrollToItem(selectedSystemIndex + 3) }
+    // The list starts with Favorites, All and the divider.
+    val selectedItem =
+        when (filter) {
+            is LibraryFilter.Favorites -> 0
+            is LibraryFilter.System -> if (selectedSystemIndex >= 0) selectedSystemIndex + 3 else -1
+            else -> 1
+        }
+    val itemPx = with(LocalDensity.current) { buttonSize.roundToPx() }
+    LaunchedEffect(selectedItem, systems.size) {
+        // Keep the console that is showing in the middle of the dock (Favorites and All too).
+        if (selectedItem < 0) return@LaunchedEffect
+        val viewport = listState.layoutInfo.viewportSize.width
+        runCatching { listState.animateScrollToItem(selectedItem, -((viewport - itemPx) / 2).coerceAtLeast(0)) }
     }
     val labelText: @Composable (Modifier) -> Unit = { modifier ->
         Text(
@@ -704,7 +724,18 @@ private fun HomeConsoleRow(
             state = listState,
             modifier =
                 modifier
-                    .focusProperties { onEnter = { selectedRequester.requestFocus() } }
+                    .focusProperties {
+                        onEnter = { selectedRequester.requestFocus() }
+                        onExit = {
+                            when (requestedFocusDirection) {
+                                // Sideways off either end would land in the top bar's corners.
+                                FocusDirection.Left, FocusDirection.Right -> cancelFocusChange()
+                                // Up goes to the carousel's buttons first, not over them.
+                                FocusDirection.Up -> upTarget?.let { runCatching { it.requestFocus() } }
+                                else -> Unit
+                            }
+                        }
+                    }
                     .dockEdgeFade(
                         horizontal = true,
                         fadeStart = { listState.canScrollBackward },
@@ -714,7 +745,7 @@ private fun HomeConsoleRow(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             item(key = "favorites") {
-                Box(Modifier.entry(filter is LibraryFilter.Favorites)) {
+                Box(Modifier.entry(filter is LibraryFilter.Favorites, LibraryFilter.Favorites)) {
                 SidebarIconButton(
                     selected = filter is LibraryFilter.Favorites,
                     icon = if (filter is LibraryFilter.Favorites) WireframeIcons.HeartFilled else WireframeIcons.Heart,
@@ -725,7 +756,7 @@ private fun HomeConsoleRow(
                 }
             }
             item(key = "all") {
-                Box(Modifier.entry(filter is LibraryFilter.All)) {
+                Box(Modifier.entry(filter is LibraryFilter.All, LibraryFilter.All)) {
                 SidebarIconButton(
                     selected = filter is LibraryFilter.All,
                     icon = WireframeIcons.AllGames,
@@ -738,7 +769,7 @@ private fun HomeConsoleRow(
                 Box(Modifier.width(1.dp).height(28.dp * adaptiveSpec.uiScale).background(chromeColors.divider))
             }
             items(systems, key = { it.name }) { system ->
-                Box(Modifier.entry((filter as? LibraryFilter.System)?.metaSystemID == system)) {
+                Box(Modifier.entry((filter as? LibraryFilter.System)?.metaSystemID == system, LibraryFilter.System(system))) {
                 SidebarSystemLogoButton(
                     meta = system,
                     selected = (filter as? LibraryFilter.System)?.metaSystemID == system,
@@ -932,6 +963,7 @@ private fun LibraryGames(
     portrait: Boolean = false,
     showViewBar: Boolean = true,
     homeEdges: HomeEdges? = null,
+    homeActionsRequester: FocusRequester? = null,
 ) {
     val context = LocalContext.current
     val firstItemRequester = remember { FocusRequester() }
@@ -1027,7 +1059,9 @@ private fun LibraryGames(
                             val edges = homeEdges ?: HomeEdges(contentEdge(portrait), contentEdge(portrait))
                             // Home's Row view is the console carousel in Home's look, kept between
                             // Home's top bar and console row and clear of a cutout.
-                            val carouselActionFocus = remember(firstItemRequester) { CarouselActionFocus(FocusRequester(), firstItemRequester) }
+                            val carouselActionFocus = remember(firstItemRequester, homeActionsRequester) {
+                                CarouselActionFocus(homeActionsRequester ?: FocusRequester(), firstItemRequester)
+                            }
                             CompositionLocalProvider(
                                 LocalHomeCarouselStyle provides true,
                                 LocalCarouselActionFocus provides carouselActionFocus,

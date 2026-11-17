@@ -345,6 +345,7 @@ internal fun ConsoleLibrary(
                 .focusRequester(focusRequester)
                 .onFocusChanged { focusState ->
                     hasFocus = focusState.isFocused
+                    actionFocus?.carouselFocused?.value = focusState.isFocused && showControllerGlyph
                     if (!focusState.isFocused) navigation?.setFocusedGame(null)
                 }
                 // Only while the carousel itself has focus: keys its buttons (children) don't use
@@ -619,6 +620,7 @@ private fun ConsoleLandscapeCard(
     onLongClick: () -> Unit,
 ) {
     val home = LocalHomeCarouselStyle.current
+    val carouselFocus = LocalCarouselActionFocus.current
     val corner = if (home) HomeCardCorner else LandscapeCardCorner
     val shape = RoundedCornerShape(corner)
     Box(
@@ -627,7 +629,7 @@ private fun ConsoleLandscapeCard(
                 .fillMaxSize()
                 .then(
                     if (home) {
-                        Modifier.homeSelectionRing(corner) { focus() }
+                        Modifier.homeSelectionRing(corner, focused = { carouselFocus?.carouselFocused?.value == true }) { focus() }
                     } else {
                         Modifier.consoleSelectionGlow(LandscapeCardCorner, focus, pulse)
                     },
@@ -923,6 +925,7 @@ private fun ConsolePortraitCard(
     onLongClick: () -> Unit,
 ) {
     val home = LocalHomeCarouselStyle.current
+    val carouselFocus = LocalCarouselActionFocus.current
     val corner = if (home) HomeCardCorner * 2 else PortraitCardCorner
     val shape = RoundedCornerShape(corner)
     val currentFocus by rememberUpdatedState(focus)
@@ -933,7 +936,7 @@ private fun ConsolePortraitCard(
                 .fillMaxSize()
                 .then(
                     if (home) {
-                        Modifier.homeSelectionRing(corner) { focus() }
+                        Modifier.homeSelectionRing(corner, focused = { carouselFocus?.carouselFocused?.value == true }) { focus() }
                     } else {
                         Modifier.consoleSelectionGlow(PortraitCardCorner, focus, pulse)
                     },

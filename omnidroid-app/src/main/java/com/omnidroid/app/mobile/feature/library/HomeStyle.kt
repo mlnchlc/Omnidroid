@@ -189,7 +189,10 @@ private fun rememberPlayTimeMs(game: Game): Long {
  * left/right for moving between games, so Down hands focus to [actions] (the Start pill), and Up
  * from the buttons returns to [carousel].
  */
-internal class CarouselActionFocus(val actions: FocusRequester, val carousel: FocusRequester)
+internal class CarouselActionFocus(val actions: FocusRequester, val carousel: FocusRequester) {
+    /** The carousel itself has controller focus: its selected card's ring turns white. */
+    val carouselFocused = mutableStateOf(false)
+}
 
 internal val LocalCarouselActionFocus = staticCompositionLocalOf<CarouselActionFocus?> { null }
 
@@ -285,14 +288,19 @@ private fun HomeRoundButton(
  * Accent ring drawn just outside a card, fading in with [amount] (0 to 1) as the card becomes the
  * selection. Drawn outside the bounds, so leave [HomeRingSpace] around the card.
  */
-internal fun Modifier.homeSelectionRing(corner: Dp, amount: () -> Float = { 1f }): Modifier =
+internal fun Modifier.homeSelectionRing(
+    corner: Dp,
+    focused: () -> Boolean = { false },
+    amount: () -> Float = { 1f },
+): Modifier =
     drawWithContent {
         drawContent()
         val alpha = amount().coerceIn(0f, 1f)
         if (alpha <= 0f) return@drawWithContent
         val outset = HomeRingOutset.toPx() + HomeRingWidth.toPx() / 2
         drawRoundRect(
-            color = LibraryNeonGreen.copy(alpha = alpha),
+            // White while a controller is on the carousel (the focus colour), green otherwise.
+            color = (if (focused()) Color.White else LibraryNeonGreen).copy(alpha = alpha),
             topLeft = Offset(-outset, -outset),
             size = Size(size.width + outset * 2, size.height + outset * 2),
             cornerRadius = CornerRadius(corner.toPx() + outset),
