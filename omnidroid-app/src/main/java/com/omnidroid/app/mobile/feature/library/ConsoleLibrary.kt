@@ -700,21 +700,15 @@ private fun LandscapeInfoPanel(
     if (game == null) return
     val home = LocalHomeCarouselStyle.current
     Column(modifier = modifier, verticalArrangement = Arrangement.Bottom) {
-        if (home && continueAction) {
-            Text(
-                text = stringResource(R.string.continue_playing).uppercase(),
-                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold, letterSpacing = 1.2.sp),
-                color = chromeColors.muted,
-                maxLines = 1,
-            )
-        }
         // Weighted so a long title gives up lines instead of squeezing the action buttons.
         ConsoleRotatingTitle(
             text = game.displayName,
             style =
                 (if (compact) MaterialTheme.typography.titleLarge else MaterialTheme.typography.headlineSmall)
                     .copy(fontWeight = FontWeight.Bold),
-            maxLines = if (compact) 1 else 2,
+            // Home keeps the title on one line (it scrolls when long) so the details and buttons
+            // below always fit beside the card.
+            maxLines = if (compact || home) 1 else 2,
             active = true,
             modifier = Modifier.weight(1f, fill = false),
             color = if (home) LibraryNeonGreen else chromeColors.content,

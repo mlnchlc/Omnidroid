@@ -572,6 +572,7 @@
     <string name="settings_description_home_view">Also switchable from the Home top bar</string>
     <!-- Home header, e.g. "played 12 min. ago" -->
     <string name="home_played_ago">played %1$s</string>
+    <string name="home_played_just_now">played just now</string>
     <string name="library_view_sidebar">Library with sidebar</string>
     <string name="library_console_start">Start</string>
     <string name="library_play_random">Play random game</string>

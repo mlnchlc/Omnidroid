@@ -135,6 +135,9 @@ internal fun homeGameMeta(game: Game): String {
     val playTime = rememberPlayTimeMs(game)
     val played =
         game.lastPlayedAt?.let {
+            if (System.currentTimeMillis() - it < DateUtils.MINUTE_IN_MILLIS) {
+                return@let stringResource(R.string.home_played_just_now)
+            }
             val ago = DateUtils.getRelativeTimeSpanString(
                 it,
                 System.currentTimeMillis(),
