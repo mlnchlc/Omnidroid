@@ -126,6 +126,10 @@ import com.omnidroid.app.mobile.shared.compose.ui.OmnidroidEmptyView
 import com.omnidroid.app.mobile.shared.compose.ui.LocalAdaptiveLayout
 import com.omnidroid.app.mobile.shared.compose.ui.chromeColors
 import com.omnidroid.app.mobile.shared.compose.ui.hugDisplayCutout
+import com.omnidroid.app.mobile.shared.compose.ui.WireframeIcons
+import com.omnidroid.app.mobile.shared.compose.ui.contentEdge
+import com.omnidroid.app.mobile.shared.compose.ui.rememberContentEdges
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -649,7 +653,11 @@ private fun HomeConsoleRow(
     onConsoleLongClick: (MetaSystemID) -> Unit,
     onAddConsole: () -> Unit,
 ) {
-    val adaptiveSpec = LocalAdaptiveLayout.current
+    // Console buttons as in the wireframes: 36 dp in landscape, 44 dp in portrait.
+    val baseSpec = LocalAdaptiveLayout.current
+    val buttonSize = (if (portrait) 44.dp else 36.dp) * baseSpec.uiScale
+    val adaptiveSpec =
+        baseSpec.copy(sidebarButtonSize = buttonSize, sidebarIconSize = buttonSize * 0.45f)
     val listState = rememberLazyListState()
     val label =
         when (filter) {
@@ -689,7 +697,7 @@ private fun HomeConsoleRow(
             item(key = "favorites") {
                 SidebarIconButton(
                     selected = filter is LibraryFilter.Favorites,
-                    icon = if (filter is LibraryFilter.Favorites) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                    icon = if (filter is LibraryFilter.Favorites) WireframeIcons.HeartFilled else WireframeIcons.Heart,
                     contentDescription = stringResource(R.string.favorites),
                     onClick = { onFilterSelected(LibraryFilter.Favorites) },
                     pinned = startupFilter is LibraryFilter.Favorites,
@@ -698,7 +706,7 @@ private fun HomeConsoleRow(
             item(key = "all") {
                 SidebarIconButton(
                     selected = filter is LibraryFilter.All,
-                    icon = Icons.Filled.GridView,
+                    icon = WireframeIcons.AllGames,
                     contentDescription = stringResource(R.string.show_all),
                     onClick = { onFilterSelected(LibraryFilter.All) },
                 )
@@ -725,6 +733,7 @@ private fun HomeConsoleRow(
             }
         }
     }
+    CompositionLocalProvider(LocalAdaptiveLayout provides adaptiveSpec) {
     if (portrait) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(start = edges.start, end = edges.end, bottom = 12.dp).focusGroup(),
@@ -746,6 +755,7 @@ private fun HomeConsoleRow(
             row(Modifier.weight(1f, fill = false))
             labelText(Modifier.padding(start = 16.dp))
         }
+    }
     }
 }
 
@@ -856,21 +866,15 @@ internal fun PortraitConsoleBar(
 internal data class HomeEdges(val start: Dp, val end: Dp)
 
 /**
- * Home content starts after the display cutout on whichever side it is, plus [HomeCutoutGap].
+ * Home content starts after the display cutout on whichever side it is, plus [CutoutGap].
  * Phones without a cutout, and TVs, report no inset and keep the normal edge spacing. Only the
  * content moves; the background still runs edge to edge.
  */
 @Composable
 internal fun homeEdgePadding(portrait: Boolean): HomeEdges {
-    val edge = if (portrait) HomePortraitEdgePadding else HomeEdgePadding
-    val density = LocalDensity.current
-    val direction = LocalLayoutDirection.current
-    val cutout = WindowInsets.displayCutout
-    val left = with(density) { cutout.getLeft(density, direction).toDp() }
-    val right = with(density) { cutout.getRight(density, direction).toDp() }
-    fun clear(inset: Dp) = if (inset > 0.dp) maxOf(edge, inset + HomeCutoutGap) else edge
-    val (start, end) = if (direction == LayoutDirection.Ltr) left to right else right to left
-    return HomeEdges(start = clear(start), end = clear(end))
+    // Shared with the top bar, so the logo, the first card and the first console line up.
+    val edges = rememberContentEdges(contentEdge(portrait))
+    return HomeEdges(start = edges.start, end = edges.end)
 }
 
 @OptIn(ExperimentalSharedTransitionApi::class)
@@ -990,7 +994,7 @@ private fun LibraryGames(
                                 onBackdropGameChange = onBackdropGameChange,
                             )
                         } else if (state.contentLayout == LibraryLayout.HOME) {
-                            val edges = homeEdges ?: HomeEdges(HomeEdgePadding, HomeEdgePadding)
+                            val edges = homeEdges ?: HomeEdges(contentEdge(portrait), contentEdge(portrait))
                             // A new dataset needs a new row, as for the paged layouts: the row's item
                             // keys would otherwise be read against a shorter list mid-update.
                             key(state.filter, state.searchQuery, state.sort) {

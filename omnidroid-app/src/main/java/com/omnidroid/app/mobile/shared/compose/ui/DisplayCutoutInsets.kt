@@ -6,6 +6,11 @@ import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -71,3 +76,37 @@ private class ScaledWindowInsets(
 
     override fun hashCode(): Int = 31 * insets.hashCode() + fraction.hashCode()
 }
+
+/** Gap kept between a display cutout and content beside it. */
+val CutoutGap = 12.dp
+
+/** Start and end spacing for content; see [rememberContentEdges]. */
+@Immutable
+data class ContentEdges(val start: Dp, val end: Dp)
+
+/**
+ * Start and end spacing shared by the top bar, Home and other full-width content, so their edges
+ * line up. Normally [edge]; on the side of a camera cutout, the cutout's depth plus [CutoutGap].
+ * Phones without a cutout, and TVs, report no inset.
+ */
+@Composable
+fun rememberContentEdges(edge: Dp): ContentEdges {
+    val density = LocalDensity.current
+    val direction = LocalLayoutDirection.current
+    val cutout = WindowInsets.displayCutout
+    val left = with(density) { cutout.getLeft(density, direction).toDp() }
+    val right = with(density) { cutout.getRight(density, direction).toDp() }
+    fun clear(inset: Dp) = if (inset > 0.dp) maxOf(edge, inset + CutoutGap) else edge
+    val (start, end) = if (direction == LayoutDirection.Ltr) left to right else right to left
+    return ContentEdges(start = clear(start), end = clear(end))
+}
+
+/** Depth of a cutout at the top of the screen (portrait punch-hole phones), or 0. */
+@Composable
+fun cutoutTopInset(): Dp {
+    val density = LocalDensity.current
+    return with(density) { WindowInsets.displayCutout.getTop(density).toDp() }
+}
+
+/** Edge spacing for app chrome and content: 16 dp in portrait, 18 dp in landscape (wireframes). */
+fun contentEdge(portrait: Boolean): Dp = if (portrait) 16.dp else 18.dp

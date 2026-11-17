@@ -71,6 +71,10 @@ fun AppTopBar(
         animationSpec = tween(300, easing = FastOutSlowInEasing),
         label = "topBarHeight",
     )
+    // Below a punch-hole at the top in portrait; beside one in landscape, with the same start and end
+    // spacing as the content underneath so their edges line up.
+    val topInset = cutoutTopInset()
+    val edges = rememberContentEdges(contentEdge(portrait))
     val syncAlignment = if (portrait) Alignment.Top else Alignment.Bottom
     val syncOrigin = TransformOrigin(0.5f, if (portrait) 0f else 1f)
 
@@ -81,19 +85,19 @@ fun AppTopBar(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .height(height)
+                        .height(height + topInset)
                         .background(Brush.verticalGradient(listOf(homeChromeColor, Color.Transparent))),
             )
             Column(
                 modifier =
                     Modifier
+                        .padding(top = topInset)
                         .fillMaxWidth()
                         .height(height)
-                        .clipToBounds()
-                        .then(if (portrait) Modifier else Modifier.hugDisplayCutout(WindowInsetsSides.Horizontal)),
+                        .clipToBounds(),
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().height(spec.topBarRowHeight).padding(horizontal = 8.dp),
+                    modifier = Modifier.fillMaxWidth().height(spec.topBarRowHeight).padding(start = edges.start, end = edges.end),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Box(modifier = Modifier.weight(1f)) {
@@ -154,7 +158,7 @@ fun AppTopBar(
                     Column {
                         Spacer(modifier = Modifier.height(2.dp))
                         Box(
-                            modifier = Modifier.fillMaxWidth().height(spec.topBarRowHeight).padding(horizontal = 8.dp),
+                            modifier = Modifier.fillMaxWidth().height(spec.topBarRowHeight).padding(start = edges.start, end = edges.end),
                             contentAlignment = Alignment.Center,
                         ) { bottomContent?.invoke() }
                     }
@@ -174,7 +178,7 @@ fun AppTopBar(
                 modifier =
                     Modifier
                         .align(if (portrait) Alignment.TopCenter else Alignment.BottomCenter)
-                        .padding(top = if (portrait) height else 0.dp, bottom = if (portrait) 0.dp else bottomPadding)
+                        .padding(top = if (portrait) height + topInset else 0.dp, bottom = if (portrait) 0.dp else bottomPadding)
                         .fillMaxWidth(0.5f),
             ) {
                 SyncProgressNotch(

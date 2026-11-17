@@ -615,6 +615,8 @@
     <string name="library_view_home">Home view</string>
     <string name="library_view_row">Row view</string>
     <string name="home_all_games">All games</string>
+    <!-- Portrait Home top bar button; %1$s is the current view, e.g. "Row view" -->
+    <string name="home_view_switch">%1$s, change view</string>
     <string name="settings_section_home">Home</string>
     <string name="library_layout_home_short">Home</string>
     <string name="library_layout_console_short">Console</string>

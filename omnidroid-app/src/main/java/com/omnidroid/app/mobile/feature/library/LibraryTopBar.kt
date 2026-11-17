@@ -110,6 +110,8 @@ import com.omnidroid.R
 import com.omnidroid.app.mobile.shared.compose.ui.AppTopBar
 import com.omnidroid.app.mobile.shared.compose.ui.FloatingChromeButton
 import com.omnidroid.app.mobile.shared.compose.ui.chromeButtonSize
+import com.omnidroid.app.mobile.shared.compose.ui.chromeIconSize
+import com.omnidroid.app.mobile.shared.compose.ui.WireframeIcons
 import com.omnidroid.app.mobile.shared.compose.ui.LocalAdaptiveLayout
 import com.omnidroid.app.mobile.shared.compose.ui.chromeColors
 import com.omnidroid.app.mobile.shared.controller.LocalControllerNavigation
@@ -145,7 +147,7 @@ fun LibraryTopBar(
     pageTitle: String? = null,
 ) {
     val spec = LocalAdaptiveLayout.current
-    val chromeIconSize = 20.dp * spec.uiScale
+    val chromeIconSize = chromeIconSize()
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
     val controllerNav = LocalControllerNavigation.current
@@ -244,6 +246,10 @@ fun LibraryTopBar(
                         ProfileChromeButton(onClick = onProfilePressed, iconSize = chromeIconSize)
                         Spacer(modifier = Modifier.width(8.dp))
                         searchField(Modifier.weight(1f))
+                        if (afterSearch != null && !searchExpanded) {
+                            Spacer(modifier = Modifier.width(8.dp))
+                            afterSearch()
+                        }
                     }
                 } else {
                     // The logo leads the bar, as on console home screens, and opens Profile.
@@ -326,18 +332,18 @@ private fun LibraryUtilityButtons(
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(chromeButtonSize() * 0.27f),
     ) {
         FloatingChromeButton(onClick = onRandomPressed) {
             Icon(
-                imageVector = Icons.Outlined.Casino,
+                imageVector = WireframeIcons.Dice,
                 contentDescription = stringResource(R.string.library_play_random),
                 modifier = Modifier.size(iconSize),
             )
         }
         FloatingChromeButton(onClick = onDisplaysPressed) {
             Icon(
-                imageVector = if (hasSecondaryOutput) Icons.Filled.CastConnected else Icons.Filled.Cast,
+                imageVector = WireframeIcons.Cast,
                 contentDescription = stringResource(R.string.displays_title),
                 tint = if (hasSecondaryOutput) libraryAccentColor else LocalContentColor.current,
                 modifier = Modifier.size(iconSize),
@@ -345,7 +351,7 @@ private fun LibraryUtilityButtons(
         }
         FloatingChromeButton(onClick = onSettingsPressed) {
             Icon(
-                Icons.Outlined.Settings,
+                WireframeIcons.Settings,
                 contentDescription = stringResource(R.string.settings),
                 modifier = Modifier.size(iconSize),
             )
@@ -386,7 +392,8 @@ private fun ProfileChromeButton(
             painter = painterResource(R.drawable.ic_profile_robot),
             contentDescription = stringResource(R.string.title_profile),
             tint = libraryAccentColor,
-            modifier = Modifier.size(iconSize + 2.dp * LocalAdaptiveLayout.current.uiScale),
+            // The logo fills most of its button, as in the wireframes.
+            modifier = Modifier.size(chromeButtonSize() * 0.72f),
         )
     }
 }
@@ -612,7 +619,7 @@ internal fun LibrarySearchField(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
-                imageVector = Icons.Filled.Search,
+                imageVector = WireframeIcons.Search,
                 contentDescription = stringResource(R.string.title_search),
                 modifier = Modifier.size(16.dp * scale),
                 tint = chromeColors.muted,

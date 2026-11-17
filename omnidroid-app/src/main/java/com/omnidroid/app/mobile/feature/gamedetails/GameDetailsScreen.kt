@@ -2,6 +2,9 @@ package com.omnidroid.app.mobile.feature.gamedetails
 
 import com.omnidroid.app.mobile.shared.compose.ui.libraryAccentColor
 import com.omnidroid.app.mobile.shared.compose.ui.OnLibraryNeonGreen
+import com.omnidroid.app.mobile.shared.compose.ui.contentEdge
+import com.omnidroid.app.mobile.shared.compose.ui.rememberContentEdges
+
 import android.net.Uri
 import android.view.ViewGroup
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -201,13 +204,16 @@ fun GameDetailsScreen(
             game = game,
             modifier = backdropModifier,
         )
+        // Same start / end spacing as the top bar and library, which also keeps the cover and
+        // buttons clear of a camera cutout in landscape.
+        val edges = rememberContentEdges(maxOf(GameDetailsScreenPadding, contentEdge(portrait = false)))
         BoxWithConstraints(
             modifier =
                 Modifier
                     .fillMaxSize()
                     .padding(
-                        start = GameDetailsScreenPadding,
-                        end = GameDetailsScreenPadding,
+                        start = edges.start,
+                        end = edges.end,
                         bottom = GameDetailsScreenPadding,
                         top = 10.dp,
                     ),

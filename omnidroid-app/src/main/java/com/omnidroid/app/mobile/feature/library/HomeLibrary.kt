@@ -1,6 +1,10 @@
 package com.omnidroid.app.mobile.feature.library
 
 import android.text.format.DateUtils
+import com.omnidroid.app.mobile.shared.compose.ui.FloatingChromeButton
+import com.omnidroid.app.mobile.shared.compose.ui.WireframeIcons
+import com.omnidroid.app.mobile.shared.compose.ui.chromeButtonSize
+import com.omnidroid.app.mobile.shared.compose.ui.chromeIconSize
 import androidx.compose.foundation.border
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
@@ -113,7 +117,7 @@ private val HomePortraitHeaderHeight = 88.dp
 private val HomePortraitActionsGap = 20.dp
 private val HomePortraitActionsHeight = 40.dp + HomePortraitActionsGap
 private val HomeCardGap = 14.dp
-private val HomeCardCorner = 8.dp
+private val HomeCardCorner = 6.dp
 private val HomeRingWidth = 3.dp
 private val HomeRingOutset = 3.dp
 
@@ -492,7 +496,7 @@ private fun HomeSelectionHeader(
         if (game == null) return@Row
         Text(
             text = game.displayName,
-            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
             color = LibraryNeonGreen,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -590,7 +594,7 @@ private fun HomePortraitActions(
             contentColor = Color(0xFF0A0A0A),
         ) {
             Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Filled.PlayArrow, contentDescription = null, modifier = Modifier.size(22.dp))
+                Icon(WireframeIcons.Play, contentDescription = null, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(8.dp))
                 Text(
                     text = stringResource(if (continueGame) R.string.continue_playing else R.string.library_console_start),
@@ -608,7 +612,7 @@ private fun HomePortraitActions(
             },
         ) {
             Icon(
-                imageVector = if (favorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                imageVector = if (favorite) WireframeIcons.HeartFilled else WireframeIcons.Heart,
                 contentDescription =
                     stringResource(
                         if (favorite) R.string.game_context_menu_remove_from_favorites else R.string.game_context_menu_add_to_favorites,
@@ -617,7 +621,7 @@ private fun HomePortraitActions(
             )
         }
         HomeRoundButton(onClick = onMore) {
-            Icon(Icons.Filled.MoreHoriz, contentDescription = stringResource(R.string.game_settings), tint = chromeColors.content)
+            Icon(WireframeIcons.More, contentDescription = stringResource(R.string.game_settings), tint = chromeColors.content)
         }
     }
 }
@@ -712,39 +716,72 @@ internal fun HomeViewSwitch(
     onViewChange: (HomeView) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // Same height as the other top bar controls; segments in the wireframe's 44 : 36 proportion.
+    val height = chromeButtonSize()
+    val inset = height * 0.1f
     Row(
         modifier =
             modifier
-                .height(44.dp)
+                .height(height)
                 .background(chromeColors.panel, CircleShape)
                 .border(BorderStroke(1.dp, chromeColors.panelBorder), CircleShape)
-                .padding(4.dp)
+                .padding(inset)
                 .selectableGroup(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(2.dp),
     ) {
-        listOf(
-            Triple(HomeView.ROW, Icons.Outlined.ViewWeek, R.string.library_view_row),
-            Triple(HomeView.GRID, Icons.Outlined.GridView, R.string.library_view_grid),
-            Triple(HomeView.LIST, Icons.AutoMirrored.Outlined.ViewList, R.string.library_view_list),
-        ).forEach { (option, icon, label) ->
+        HomeView.entries.forEach { option ->
             val selected = option == view
             Box(
                 modifier =
                     Modifier
-                        .size(width = 44.dp, height = 36.dp)
+                        .size(width = height, height = height - inset * 2)
                         .controllerFocusGlow(CircleShape)
                         .background(if (selected) chromeColors.panelSelected else Color.Transparent, CircleShape)
                         .selectable(selected = selected, role = Role.Tab) { onViewChange(option) },
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
-                    imageVector = icon,
-                    contentDescription = stringResource(label),
-                    modifier = Modifier.size(20.dp),
+                    imageVector = option.icon(),
+                    contentDescription = stringResource(option.labelRes()),
+                    modifier = Modifier.size(chromeIconSize()),
                     tint = if (selected) LibraryNeonGreen else chromeColors.muted,
                 )
             }
         }
     }
 }
+
+/**
+ * One round button showing the current Home view; each press moves to the next. Used in the
+ * portrait top bar, where the three-way switch does not fit beside search and the other buttons.
+ */
+@Composable
+internal fun HomeViewCycleButton(
+    view: HomeView,
+    onViewChange: (HomeView) -> Unit,
+) {
+    val next = HomeView.entries[(view.ordinal + 1) % HomeView.entries.size]
+    FloatingChromeButton(onClick = { onViewChange(next) }) {
+        Icon(
+            imageVector = view.icon(),
+            contentDescription = stringResource(R.string.home_view_switch, stringResource(view.labelRes())),
+            modifier = Modifier.size(chromeIconSize()),
+            tint = LibraryNeonGreen,
+        )
+    }
+}
+
+private fun HomeView.icon() =
+    when (this) {
+        HomeView.ROW -> WireframeIcons.ViewRow
+        HomeView.GRID -> WireframeIcons.ViewGrid
+        HomeView.LIST -> WireframeIcons.ViewList
+    }
+
+private fun HomeView.labelRes() =
+    when (this) {
+        HomeView.ROW -> R.string.library_view_row
+        HomeView.GRID -> R.string.library_view_grid
+        HomeView.LIST -> R.string.library_view_list
+    }

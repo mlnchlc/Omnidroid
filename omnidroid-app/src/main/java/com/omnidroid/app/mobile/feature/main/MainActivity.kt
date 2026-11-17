@@ -69,6 +69,7 @@ import com.omnidroid.app.mobile.feature.displays.DisplaysDialog
 import com.omnidroid.app.mobile.feature.gamedetails.GameDetailsScreen
 import com.omnidroid.app.mobile.feature.gamedetails.GameDetailsViewModel
 import com.omnidroid.app.mobile.feature.library.LibraryFilter
+import com.omnidroid.app.mobile.feature.library.HomeViewCycleButton
 import com.omnidroid.app.mobile.feature.library.HomeViewSwitch
 import com.omnidroid.app.mobile.feature.library.LibraryLayout
 import com.omnidroid.app.mobile.feature.library.LibraryScreen
@@ -92,6 +93,7 @@ import com.omnidroid.app.mobile.shared.compose.dialog.OmnidroidDialogButton
 import com.omnidroid.app.mobile.shared.compose.ui.AppTheme
 import com.omnidroid.app.mobile.shared.compose.ui.GameCoverOrigin
 import com.omnidroid.app.mobile.shared.compose.ui.LocalAdaptiveLayout
+import com.omnidroid.app.mobile.shared.compose.ui.cutoutTopInset
 import com.omnidroid.app.mobile.shared.compose.ui.calculateAdaptiveLayoutSpec
 import com.omnidroid.app.mobile.shared.compose.ui.homeChromeColor
 import com.omnidroid.app.mobile.shared.controller.ControllerHintBar
@@ -534,9 +536,9 @@ class MainActivity : RetrogradeComponentActivity(), BusyActivity {
                 }
             val portrait = maxHeight > maxWidth
             val portraitColumnWidth = maxWidth
-            // The library bar is one row in both orientations.
-            val libraryTopPadding = adaptiveSpec.topBarRowHeight
-            val standardTopPadding = adaptiveSpec.topBarRowHeight
+            // The library bar is one row in both orientations, below any punch-hole at the top.
+            val libraryTopPadding = adaptiveSpec.topBarRowHeight + cutoutTopInset()
+            val standardTopPadding = libraryTopPadding
             CompositionLocalProvider(
                 LocalControllerNavigation provides controllerNav,
                 LocalAdaptiveLayout provides adaptiveSpec,
@@ -873,12 +875,19 @@ class MainActivity : RetrogradeComponentActivity(), BusyActivity {
             if (currentRoute != MainRoute.SETTINGS_UI_SCALE) {
                 LibraryTopBar(
                     afterSearch =
-                        if (currentRoute == MainRoute.HOME && libraryState.layout == LibraryLayout.HOME && !portrait) {
+                        if (currentRoute == MainRoute.HOME && libraryState.layout == LibraryLayout.HOME) {
                             {
-                                HomeViewSwitch(
-                                    view = libraryState.homeView,
-                                    onViewChange = { libraryViewModel.setHomeView(it) },
-                                )
+                                if (portrait) {
+                                    HomeViewCycleButton(
+                                        view = libraryState.homeView,
+                                        onViewChange = { libraryViewModel.setHomeView(it) },
+                                    )
+                                } else {
+                                    HomeViewSwitch(
+                                        view = libraryState.homeView,
+                                        onViewChange = { libraryViewModel.setHomeView(it) },
+                                    )
+                                }
                             }
                         } else {
                             null
