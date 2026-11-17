@@ -23,10 +23,20 @@ import com.omnidroid.app.mobile.shared.controller.controllerFocusGlow
 @Composable
 internal fun chromeButtonSize(): Dp {
     val spec = LocalAdaptiveLayout.current
-    // 44 dp round buttons, close to Android's 48 dp touch-target guidance and easy to hit on a TV.
-    val base = if (spec.isUltraCompact) 40.dp else 44.dp
+    // Sized from the wireframes (44 px on a 1040 x 480 landscape frame, 390 px wide portrait):
+    // 34 dp on a landscape phone, 40 dp on a portrait phone, 44 dp on larger screens.
+    val base =
+        when {
+            spec.isUltraCompact -> 40.dp
+            spec.isCompact -> 34.dp
+            else -> 44.dp
+        }
     return base * spec.uiScale
 }
+
+/** Icon size inside a [chromeButtonSize] button, keeping the wireframe's 20 / 44 ratio. */
+@Composable
+internal fun chromeIconSize(): Dp = chromeButtonSize() * 0.45f
 
 /** Round top bar icon button on the chrome panel colour, darker while pressed. */
 @Composable
