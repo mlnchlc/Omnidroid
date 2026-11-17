@@ -95,8 +95,10 @@ fun OmnidroidSettingsSwitch(
     subtitle: (@Composable () -> Unit)? = subtitleRes?.let { { Text(stringResource(it)) } },
     onCheckedChange: (Boolean) -> Unit = {},
 ) {
+    // The tile puts its click handler (the focus target) outside the modifier it is given, so a
+    // ring passed in never sees focus; a wrapper does.
+    Box(modifier = modifier.controllerFocusGlow(RoundedCornerShape(8.dp))) {
     SettingsSwitch(
-        modifier = modifier.controllerFocusGlow(RoundedCornerShape(8.dp)),
         enabled = enabled,
         state = value,
         icon = icon,
@@ -108,6 +110,7 @@ fun OmnidroidSettingsSwitch(
         },
         colors = omnidroidSettingsColor(enabled),
     )
+    }
 }
 
 @Composable
@@ -122,8 +125,10 @@ fun OmnidroidSettingsMenuLink(
     action: (@Composable () -> Unit)? = null,
     onClick: () -> Unit,
 ) {
+    // The tile puts its click handler (the focus target) outside the modifier it is given, so a
+    // ring passed in never sees focus; a wrapper does.
+    Box(modifier = modifier.controllerFocusGlow(RoundedCornerShape(8.dp))) {
     SettingsMenuLink(
-        modifier = modifier.controllerFocusGlow(RoundedCornerShape(8.dp)),
         enabled = enabled,
         icon = icon,
         title = title,
@@ -132,6 +137,7 @@ fun OmnidroidSettingsMenuLink(
         onClick = onClick,
         colors = omnidroidSettingsColor(enabled),
     )
+    }
 }
 
 @Composable

@@ -45,6 +45,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.foundation.focusGroup
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.res.stringResource
@@ -180,7 +182,7 @@ internal fun SettingsTopMenu(
     Column(modifier = modifier.fillMaxWidth()) {
         LazyRow(
             state = listState,
-            modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
+            modifier = Modifier.fillMaxWidth().enterOnSelected(selected, focusRequesters).padding(vertical = 10.dp),
             contentPadding = PaddingValues(horizontal = edgePadding),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -215,6 +217,7 @@ internal fun SettingsSidebar(
                 Modifier
                     .width(SettingsSidebarWidth)
                     .fillMaxHeight()
+                    .enterOnSelected(selected, focusRequesters)
                     .verticalScroll(rememberScrollState())
                     .padding(end = 12.dp, top = 10.dp, bottom = 12.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
@@ -233,3 +236,13 @@ internal fun SettingsSidebar(
         Box(Modifier.width(1.dp).fillMaxHeight().background(chromeColors.divider))
     }
 }
+
+/**
+ * Focusing a section opens it, so a controller coming in from the page must land on the open
+ * section, not whichever one is nearest (which would switch pages under the user).
+ */
+private fun Modifier.enterOnSelected(
+    selected: SettingsSection,
+    focusRequesters: Map<SettingsSection, FocusRequester>,
+): Modifier =
+    focusProperties { onEnter = { focusRequesters[selected]?.requestFocus() } }.focusGroup()
