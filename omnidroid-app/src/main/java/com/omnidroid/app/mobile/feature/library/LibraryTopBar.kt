@@ -212,6 +212,7 @@ fun LibraryTopBar(
     val actions: @Composable () -> Unit = {
         Row(verticalAlignment = Alignment.CenterVertically) {
             LibraryUtilityButtons(
+                portrait = portrait,
                 hasSecondaryOutput = hasSecondaryOutput,
                 iconSize = chromeIconSize,
                 onRandomPressed = onRandomPressed,
@@ -321,6 +322,7 @@ private fun LibrarySearchRow(
 /** Play random, displays and settings, as round chrome buttons. */
 @Composable
 private fun LibraryUtilityButtons(
+    portrait: Boolean,
     hasSecondaryOutput: Boolean,
     iconSize: Dp,
     onRandomPressed: () -> Unit,
@@ -329,7 +331,8 @@ private fun LibraryUtilityButtons(
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(chromeButtonSize() * 0.27f),
+        // Tighter in portrait, where search shares the row with four buttons.
+        horizontalArrangement = Arrangement.spacedBy(if (portrait) 6.dp else chromeButtonSize() * 0.27f),
     ) {
         FloatingChromeButton(onClick = onRandomPressed) {
             Icon(
