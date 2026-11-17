@@ -2,6 +2,18 @@ package com.omnidroid.app.mobile.shared.compose.sidemenu
 
 import androidx.annotation.StringRes
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material3.Icon
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -106,11 +118,121 @@ fun SideMenuPageScope.MenuAction(
     icon: (@Composable () -> Unit)? = null,
     enabled: Boolean = true,
     modifier: Modifier = Modifier,
+    /** Short note at the end of the row, such as "asks first". */
+    trailing: String? = null,
+    /** Shows › for rows that open another page. */
+    chevron: Boolean = false,
     onClick: () -> Unit,
 ) = OmnidroidSettingsMenuLink(
     modifier = itemModifier(id, enabled, modifier), title = title, subtitle = subtitle, icon = icon,
     enabled = enabled, onClick = onClick,
+    action =
+        if (trailing != null || chevron) {
+            { MenuRowEnd(trailing, chevron) }
+        } else {
+            null
+        },
 )
+
+@Composable
+internal fun MenuRowEnd(text: String?, chevron: Boolean) {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(end = 8.dp)) {
+        if (text != null) {
+            Text(text, style = MaterialTheme.typography.bodySmall, color = chromeColors.muted, maxLines = 1)
+        }
+        if (chevron) {
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = chromeColors.muted,
+                modifier = Modifier.padding(start = 4.dp).size(20.dp),
+            )
+        }
+    }
+}
+
+/** One tile in a [MenuPreviewGrid]: a save slot with its picture, or "No save". */
+data class MenuPreviewItem(
+    val id: String,
+    val title: String,
+    val subtitle: String,
+    val preview: ImageBitmap?,
+    /** Shown in place of the picture, e.g. "No save". */
+    val placeholder: String,
+    val enabled: Boolean,
+    val onFocused: () -> Unit,
+    val onClick: () -> Unit,
+)
+
+/**
+ * Save slots as a two-column grid of pictures, so saves can be told apart at a glance. Each
+ * tile is a controller focus target like any other row.
+ */
+@Composable
+fun SideMenuPageScope.MenuPreviewGrid(id: String, items: List<MenuPreviewItem>) {
+    key(id) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            items.chunked(2).forEach { pair ->
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    pair.forEach { item ->
+                        val shape = RoundedCornerShape(10.dp)
+                        Surface(
+                            onClick = item.onClick,
+                            enabled = item.enabled,
+                            modifier =
+                                itemModifier(
+                                    item.id,
+                                    item.enabled,
+                                    Modifier.weight(1f).controllerFocusGlow(shape).onFocusChanged {
+                                        if (it.isFocused) item.onFocused()
+                                    },
+                                ),
+                            shape = shape,
+                            color = chromeColors.panelSelected,
+                            contentColor = chromeContentColor,
+                            border = BorderStroke(1.dp, chromeColors.panelBorder),
+                        ) {
+                            Column {
+                                Box(
+                                    Modifier.fillMaxWidth().aspectRatio(4f / 3f).background(chromeColors.panel),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    if (item.preview != null) {
+                                        Image(
+                                            bitmap = item.preview,
+                                            contentDescription = null,
+                                            contentScale = ContentScale.Crop,
+                                            modifier = Modifier.fillMaxSize(),
+                                        )
+                                    } else {
+                                        Text(item.placeholder, style = MaterialTheme.typography.bodySmall, color = chromeColors.muted)
+                                    }
+                                }
+                                Column(Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
+                                    Text(
+                                        item.title,
+                                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+                                        maxLines = 1,
+                                    )
+                                    Text(
+                                        item.subtitle,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = chromeColors.muted,
+                                        maxLines = 1,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    if (pair.size == 1) Spacer(Modifier.weight(1f))
+                }
+            }
+        }
+    }
+}
 
 data class MenuOption<T>(val value: T, val label: String)
 

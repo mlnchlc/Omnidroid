@@ -23,6 +23,8 @@ import com.omnidroid.app.mobile.feature.gamemenu.ConfirmProgressLossDialog
 import com.omnidroid.app.mobile.feature.gamemenu.confirmGameMenuActionsEnabled
 import com.omnidroid.app.mobile.shared.compose.gamemenu.MenuDrawableIcon
 import com.omnidroid.app.mobile.shared.compose.sidemenu.MenuAction
+import com.omnidroid.app.mobile.shared.compose.sidemenu.MenuPreviewGrid
+import com.omnidroid.app.mobile.shared.compose.sidemenu.MenuPreviewItem
 import com.omnidroid.app.mobile.shared.compose.sidemenu.MenuSection
 import com.omnidroid.app.mobile.shared.compose.sidemenu.SideMenuPage
 
@@ -87,53 +89,46 @@ fun GameMenuStatesScreen(
                 onClick = viewModel::retry,
             )
         }
-        state.value.autoSave?.let { autoSave ->
-            MenuSection("autosave") {
-                PreviewOnFocus(slotPreview, null) {
-                    MenuAction(
-                        "autosave",
-                        titleRes = R.string.game_menu_autosave,
-                        subtitle = { Text(autoSave.description) },
-                        enabled = autoSave.enabled,
-                    ) {
-                        if (askToConfirm) pending = PendingSlot(null, autoSaveTitle, autoSave.description) else onAutoSaveClicked()
-                    }
+        val noSave = stringResource(R.string.game_menu_no_save)
+        val gridItems =
+            buildList {
+                state.value.autoSave?.let { autoSave ->
+                    add(
+                        MenuPreviewItem(
+                            id = "autosave",
+                            title = autoSaveTitle,
+                            subtitle = autoSave.description,
+                            preview = null,
+                            placeholder = autoSaveTitle,
+                            enabled = autoSave.enabled,
+                            onFocused = { slotPreview?.bitmap = null },
+                        ) {
+                            if (askToConfirm) pending = PendingSlot(null, autoSaveTitle, autoSave.description) else onAutoSaveClicked()
+                        },
+                    )
                 }
-            }
-        }
-        MenuSection("slots", visible = state.value.entries.isNotEmpty()) {
-            state.value.entries.forEach { entry ->
-                PreviewOnFocus(slotPreview, entry.preview) {
-                    MenuAction(
-                        id = "slot-${entry.slot}",
-                        title = { Text(entry.title) },
-                        subtitle = { Text(entry.description) },
-                        enabled = entry.enabled,
-                        icon = {
-                            val preview = entry.preview
-                            if (preview != null) {
-                                Image(
-                                    modifier = Modifier.size(48.dp),
-                                    bitmap = preview.asImageBitmap(),
-                                    contentScale = ContentScale.Crop,
-                                    contentDescription = null,
-                                )
+                state.value.entries.forEach { entry ->
+                    add(
+                        MenuPreviewItem(
+                            id = "slot-${entry.slot}",
+                            title = entry.title,
+                            subtitle = entry.description,
+                            preview = entry.preview?.asImageBitmap(),
+                            placeholder = noSave,
+                            enabled = entry.enabled,
+                            onFocused = { slotPreview?.bitmap = entry.preview },
+                        ) {
+                            val needsConfirm = askToConfirm && (mode == StatesMenuMode.LOAD || entry.exists)
+                            if (needsConfirm) {
+                                pending = PendingSlot(entry.slot, entry.title, entry.description, entry.preview)
                             } else {
-                                // Keeps empty slots aligned with filled ones.
-                                MenuDrawableIcon(R.drawable.ic_menu_save)
+                                onStateClicked(entry.slot)
                             }
                         },
-                    ) {
-                        val needsConfirm = askToConfirm && (mode == StatesMenuMode.LOAD || entry.exists)
-                        if (needsConfirm) {
-                            pending = PendingSlot(entry.slot, entry.title, entry.description, entry.preview)
-                        } else {
-                            onStateClicked(entry.slot)
-                        }
-                    }
+                    )
                 }
             }
-        }
+        if (gridItems.isNotEmpty()) MenuPreviewGrid("slots", gridItems)
         MenuSection("new-slot", visible = state.value.canAddSlot) {
             PreviewOnFocus(slotPreview, null) {
                 MenuAction(

@@ -27,6 +27,7 @@ import com.omnidroid.app.mobile.shared.compose.sidemenu.MenuSection
 import com.omnidroid.app.mobile.shared.compose.sidemenu.MenuAction
 import com.omnidroid.app.mobile.shared.compose.sidemenu.MenuChoice
 import com.omnidroid.app.mobile.shared.compose.sidemenu.MenuToggle
+import com.omnidroid.app.utils.android.settings.booleanPreferenceState
 import com.omnidroid.lib.savesync.GameCloudSyncPreferences
 
 @Composable
@@ -41,6 +42,7 @@ fun GameMenuHomeScreen(
     var audioEnabled by remember(request.audioEnabled) { mutableStateOf(request.audioEnabled) }
     var confirmRestart by remember { mutableStateOf(false) }
     val askToConfirm = confirmGameMenuActionsEnabled()
+    val autosaveOnQuit = booleanPreferenceState(R.string.pref_key_autosave, true).value
     if (confirmRestart) {
         ConfirmProgressLossDialog(
             title = stringResource(R.string.game_menu_restart_confirm_title),
@@ -87,18 +89,28 @@ fun GameMenuHomeScreen(
                 }
             }
             if (statesSupported && !sheet) {
-                MenuAction("save", titleRes = R.string.game_menu_save, icon = { MenuDrawableIcon(R.drawable.ic_menu_save) }) {
-                    navController.navigateToRoute(GameMenuRoute.SAVE)
-                }
-                MenuAction("load", titleRes = R.string.game_menu_load, icon = { MenuDrawableIcon(R.drawable.ic_menu_load) }) {
-                    navController.navigateToRoute(GameMenuRoute.LOAD)
-                }
+                MenuAction(
+                    "save", titleRes = R.string.game_menu_save_state, chevron = true,
+                    icon = { MenuDrawableIcon(R.drawable.ic_menu_save) },
+                ) { navController.navigateToRoute(GameMenuRoute.SAVE) }
+                MenuAction(
+                    "load", titleRes = R.string.game_menu_load_state, chevron = true,
+                    icon = { MenuDrawableIcon(R.drawable.ic_menu_load) },
+                ) { navController.navigateToRoute(GameMenuRoute.LOAD) }
             }
-            MenuAction("restart", titleRes = R.string.game_menu_restart, icon = { MenuDrawableIcon(R.drawable.ic_menu_restart) }) {
+            MenuAction(
+                "restart", titleRes = R.string.game_menu_restart,
+                trailing = if (askToConfirm) stringResource(R.string.game_menu_asks_first) else null,
+                icon = { MenuDrawableIcon(R.drawable.ic_menu_restart) },
+            ) {
                 if (askToConfirm) confirmRestart = true else onCommand(InGameMenuCommand.Restart)
             }
             if (!sheet) {
-                MenuAction("quit", titleRes = R.string.game_menu_quit, icon = { MenuDrawableIcon(R.drawable.ic_menu_quit) }) {
+                MenuAction(
+                    "quit", titleRes = R.string.game_menu_quit,
+                    trailing = if (autosaveOnQuit) stringResource(R.string.game_menu_autosaves) else null,
+                    icon = { MenuDrawableIcon(R.drawable.ic_menu_quit) },
+                ) {
                     onCommand(InGameMenuCommand.Quit)
                 }
             }
@@ -133,7 +145,7 @@ fun GameMenuHomeScreen(
                 CloudSaveMenuChoice(override) { prefs.setOverride(request.game.id, it) }
             }
             if (hasSettings) {
-                MenuAction("options", titleRes = R.string.game_menu_settings, icon = { MenuDrawableIcon(R.drawable.ic_menu_settings) }) {
+                MenuAction("options", titleRes = R.string.game_menu_game_settings, chevron = true, icon = { MenuDrawableIcon(R.drawable.ic_menu_settings) }) {
                     navController.navigateToRoute(GameMenuRoute.OPTIONS)
                 }
             }

@@ -185,6 +185,7 @@ class GameMenuActivity : RetrogradeComponentActivity() {
                         bottomReserved = if (gamepadConnected) ControllerHintBarRowHeight else 0.dp,
                         onClosed = { onResult { pendingCommand?.writeTo(this) } },
                         beside = { SlotPreviewBeside(slotPreview) },
+                        homeHeader = { onClose -> GameMenuHeader(gameMenuRequest.game, onClose) },
                     ) {
                         SideMenuNavHost(navController, GameMenuRoute.HOME.route) {
                             composable(GameMenuRoute.HOME) {
