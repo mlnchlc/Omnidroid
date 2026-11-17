@@ -144,7 +144,7 @@ fun AppTopBar(
                                 Box(Modifier.width(1.dp).height(24.dp).background(chromeColors.divider))
                                 Spacer(modifier = Modifier.width(12.dp))
                             } else {
-                                Spacer(modifier = Modifier.width(8.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
                             }
                             trailingContent?.invoke()
                         }
