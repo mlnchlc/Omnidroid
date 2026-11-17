@@ -73,7 +73,7 @@ fun AppTopBar(
     val edges = rememberContentEdges(contentEdge(portrait))
     // On narrow landscape screens (small 4:3 handhelds) the read-outs would crowd search and
     // the buttons, so they make way while the controls are up.
-    val statusFits = !controlsVisible || trailingContent == null || LocalConfiguration.current.screenWidthDp >= 560
+    val statusFits = !controlsVisible || trailingContent == null || LocalConfiguration.current.screenWidthDp >= 700
     val status = showStatus && statusFits
     val syncAlignment = if (portrait) Alignment.Top else Alignment.Bottom
     val syncOrigin = TransformOrigin(0.5f, if (portrait) 0f else 1f)
