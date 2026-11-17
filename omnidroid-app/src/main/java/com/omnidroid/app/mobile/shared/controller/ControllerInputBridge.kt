@@ -1,11 +1,13 @@
 package com.omnidroid.app.mobile.shared.controller
 
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.MotionEvent
+import android.view.ViewConfiguration
 import kotlin.math.abs
 
 class ControllerInputBridge {
@@ -13,7 +15,12 @@ class ControllerInputBridge {
 
     private val activeNavigation get() = navigation?.modalNavigation ?: navigation
 
-    private val stick = StickPressFilter()
+    // Holding the stick repeats at the same pace as holding the D-pad: Android's key repeat timing.
+    private val stick =
+        StickPressFilter(
+            holdDelayMs = keyRepeatTimeout(),
+            holdRepeatMs = keyRepeatDelay(),
+        )
     private var lastHatX = 0f
     private var lastHatY = 0f
     private var lastL2Pressed = false
@@ -305,6 +312,18 @@ class ControllerInputBridge {
     }
 
     companion object {
+        /** Before the D-pad starts repeating; the system long-press time before Android 9. */
+        private fun keyRepeatTimeout(): Long =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                ViewConfiguration.getKeyRepeatTimeout().toLong()
+            } else {
+                ViewConfiguration.getLongPressTimeout().toLong()
+            }
+
+        /** Between D-pad repeats. */
+        private fun keyRepeatDelay(): Long =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) ViewConfiguration.getKeyRepeatDelay().toLong() else 50L
+
         private const val HAT_DEADZONE = 0.5f
         private const val STICK_DEADZONE = 0.6f
         private const val SHOULDER_HOLD_MS = 350L
