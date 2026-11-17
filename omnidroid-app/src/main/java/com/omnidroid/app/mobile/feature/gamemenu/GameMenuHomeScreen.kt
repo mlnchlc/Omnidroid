@@ -18,7 +18,6 @@ import com.omnidroid.app.mobile.feature.gamemenu.tilt.TiltConfigurationMenuEntry
 import com.omnidroid.app.mobile.shared.compose.gamemenu.MenuDrawableIcon
 import com.omnidroid.app.mobile.shared.compose.gamemenu.FrameSpeedMenuChoice
 import com.omnidroid.app.mobile.shared.compose.gamemenu.CloudSaveMenuChoice
-import com.omnidroid.app.mobile.shared.compose.sidemenu.LocalSideMenuIsSheet
 import com.omnidroid.app.mobile.shared.compose.sidemenu.MenuOption
 import com.omnidroid.app.mobile.shared.compose.sidemenu.MenuTile
 import com.omnidroid.app.mobile.shared.compose.sidemenu.MenuTiles
@@ -42,7 +41,6 @@ fun GameMenuHomeScreen(
     var audioEnabled by remember(request.audioEnabled) { mutableStateOf(request.audioEnabled) }
     var confirmRestart by remember { mutableStateOf(false) }
     val askToConfirm = confirmGameMenuActionsEnabled()
-    val autosaveOnQuit = booleanPreferenceState(R.string.pref_key_autosave, true).value
     if (confirmRestart) {
         ConfirmProgressLossDialog(
             title = stringResource(R.string.game_menu_restart_confirm_title),
@@ -56,64 +54,35 @@ fun GameMenuHomeScreen(
     val hasSettings = request.advancedCoreOptions.isNotEmpty() || request.coreOptions.isNotEmpty() ||
         request.coreConfig.controllerConfigs.values.any { it.size >= 2 }
     val hasControls = request.editTouchControlsSupported || saveSyncSupported || hasSettings || request.allTiltConfigurations.isNotEmpty()
-    val sheet = LocalSideMenuIsSheet.current
     val statesSupported = request.coreConfig.statesSupported
     val resumeLabel = stringResource(R.string.game_menu_resume)
     val saveLabel = stringResource(R.string.game_menu_save)
     val loadLabel = stringResource(R.string.game_menu_load)
     val quitLabel = stringResource(R.string.game_menu_quit)
     SideMenuPage("game-home") {
-        if (sheet) {
-            // Portrait sheet: the four most-used actions as big tiles, Resume first and highlighted.
-            MenuTiles(
-                "quick",
-                listOfNotNull(
-                    MenuTile("resume", resumeLabel, { Icon(Icons.Filled.PlayArrow, contentDescription = null) }, highlighted = true, onClick = onResume),
-                    MenuTile("save", saveLabel, { MenuDrawableIcon(R.drawable.ic_menu_save) }) {
-                        navController.navigateToRoute(GameMenuRoute.SAVE)
-                    }.takeIf { statesSupported },
-                    MenuTile("load", loadLabel, { MenuDrawableIcon(R.drawable.ic_menu_load) }) {
-                        navController.navigateToRoute(GameMenuRoute.LOAD)
-                    }.takeIf { statesSupported },
-                    MenuTile("quit", quitLabel, { MenuDrawableIcon(R.drawable.ic_menu_quit) }) {
-                        onCommand(InGameMenuCommand.Quit)
-                    },
-                ),
-            )
-        }
+        // The four most-used actions as big tiles, Resume first and highlighted, so A on a menu
+        // opened by mistake goes straight back to the game. Same in the side panel and the sheet.
+        MenuTiles(
+            "quick",
+            listOfNotNull(
+                MenuTile("resume", resumeLabel, { Icon(Icons.Filled.PlayArrow, contentDescription = null) }, highlighted = true, onClick = onResume),
+                MenuTile("save", saveLabel, { MenuDrawableIcon(R.drawable.ic_menu_save) }) {
+                    navController.navigateToRoute(GameMenuRoute.SAVE)
+                }.takeIf { statesSupported },
+                MenuTile("load", loadLabel, { MenuDrawableIcon(R.drawable.ic_menu_load) }) {
+                    navController.navigateToRoute(GameMenuRoute.LOAD)
+                }.takeIf { statesSupported },
+                MenuTile("quit", quitLabel, { MenuDrawableIcon(R.drawable.ic_menu_quit) }) {
+                    onCommand(InGameMenuCommand.Quit)
+                },
+            ),
+        )
         MenuSection("commands") {
-            // First, so A on opening the menu by mistake goes straight back to the game.
-            if (!sheet) {
-                MenuAction("resume", titleRes = R.string.game_menu_resume, icon = { Icon(Icons.Filled.PlayArrow, contentDescription = null) }) {
-                    onResume()
-                }
-            }
-            if (statesSupported && !sheet) {
-                MenuAction(
-                    "save", titleRes = R.string.game_menu_save_state, chevron = true,
-                    icon = { MenuDrawableIcon(R.drawable.ic_menu_save) },
-                ) { navController.navigateToRoute(GameMenuRoute.SAVE) }
-                MenuAction(
-                    "load", titleRes = R.string.game_menu_load_state, chevron = true,
-                    icon = { MenuDrawableIcon(R.drawable.ic_menu_load) },
-                ) { navController.navigateToRoute(GameMenuRoute.LOAD) }
-            }
             MenuAction(
                 "restart", titleRes = R.string.game_menu_restart,
-                // The side panel has room for the note; the portrait sheet keeps rows plain.
-                trailing = if (askToConfirm && !sheet) stringResource(R.string.game_menu_asks_first) else null,
                 icon = { MenuDrawableIcon(R.drawable.ic_menu_restart) },
             ) {
                 if (askToConfirm) confirmRestart = true else onCommand(InGameMenuCommand.Restart)
-            }
-            if (!sheet) {
-                MenuAction(
-                    "quit", titleRes = R.string.game_menu_quit,
-                    trailing = if (autosaveOnQuit) stringResource(R.string.game_menu_autosaves) else null,
-                    icon = { MenuDrawableIcon(R.drawable.ic_menu_quit) },
-                ) {
-                    onCommand(InGameMenuCommand.Quit)
-                }
             }
         }
         MenuSection("playback") {
