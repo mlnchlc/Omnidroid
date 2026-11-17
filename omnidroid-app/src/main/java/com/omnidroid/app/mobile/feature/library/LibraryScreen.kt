@@ -1,5 +1,6 @@
 package com.omnidroid.app.mobile.feature.library
 
+import com.omnidroid.app.mobile.shared.compose.ui.accentColor
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.focus.FocusDirection
 import android.content.Context
@@ -307,7 +308,6 @@ fun LibraryScreen(
                     homeActionsRequester = homeActionsRequester,
                 )
                 HomeConsoleRow(
-                    upTarget = homeActionsRequester,
                     filter = state.filter,
                     systems = state.sidebarSystems,
                     selectedGameCount = state.selectedSystemGameCount,
@@ -550,7 +550,7 @@ internal fun SidebarIconButton(
         tonalElevation = 0.dp,
         border =
             if (selected) {
-                BorderStroke(2.dp, LibraryNeonGreen)
+                BorderStroke(2.dp, accentColor)
             } else {
                 BorderStroke(1.dp, chromeColors.panelBorder)
             },
@@ -560,7 +560,7 @@ internal fun SidebarIconButton(
                 imageVector = icon,
                 contentDescription = contentDescription,
                 modifier = Modifier.size(adaptiveSpec.sidebarIconSize),
-                tint = if (selected) LibraryNeonGreen else chromeColors.muted,
+                tint = if (selected) accentColor else chromeColors.muted,
             )
             StartupBadge(visible = pinned)
         }
@@ -575,7 +575,7 @@ private fun BoxScope.StartupBadge(visible: Boolean) {
         imageVector = Icons.Filled.Star,
         contentDescription = null,
         modifier = Modifier.align(Alignment.TopEnd).size(14.dp * scale).padding(1.dp),
-        tint = LibraryNeonGreen,
+        tint = accentColor,
     )
 }
 
@@ -653,7 +653,6 @@ internal fun SidebarSystemLogoButton(
  */
 @Composable
 private fun HomeConsoleRow(
-    upTarget: FocusRequester?,
     filter: LibraryFilter,
     systems: List<MetaSystemID>,
     selectedGameCount: Int?,
@@ -670,13 +669,6 @@ private fun HomeConsoleRow(
     val adaptiveSpec =
         baseSpec.copy(sidebarButtonSize = buttonSize, sidebarIconSize = buttonSize * 0.45f)
     val listState = rememberLazyListState()
-    // A controller entering the dock lands on the console that is showing, not whichever button
-    // happens to sit under the previous focus.
-    val selectedRequester = remember { FocusRequester() }
-    // With a controller the dock has one highlight: moving along it switches console, as L1/R1 do.
-    fun Modifier.entry(selected: Boolean, filter: LibraryFilter): Modifier =
-        (if (selected) focusRequester(selectedRequester) else this)
-            .onFocusChanged { if (it.hasFocus && !selected) onFilterSelected(filter) }
     val label =
         when (filter) {
             is LibraryFilter.Favorites -> stringResource(R.string.favorites)
@@ -717,18 +709,9 @@ private fun HomeConsoleRow(
             state = listState,
             modifier =
                 modifier
-                    .focusProperties {
-                        onEnter = { selectedRequester.requestFocus() }
-                        onExit = {
-                            when (requestedFocusDirection) {
-                                // Sideways off either end would land in the top bar's corners.
-                                FocusDirection.Left, FocusDirection.Right -> cancelFocusChange()
-                                // Up goes to the carousel's buttons first, not over them.
-                                FocusDirection.Up -> upTarget?.let { runCatching { it.requestFocus() } }
-                                else -> Unit
-                            }
-                        }
-                    }
+                    // No controller focus here: L1/R1 switch console (one highlight, the selected
+                    // one). Touch still works.
+                    .focusProperties { onEnter = { cancelFocusChange() } }
                     .dockEdgeFade(
                         horizontal = true,
                         fadeStart = { listState.canScrollBackward },
@@ -738,7 +721,7 @@ private fun HomeConsoleRow(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             item(key = "favorites") {
-                Box(Modifier.entry(filter is LibraryFilter.Favorites, LibraryFilter.Favorites)) {
+                Box {
                 SidebarIconButton(
                     selected = filter is LibraryFilter.Favorites,
                     icon = if (filter is LibraryFilter.Favorites) WireframeIcons.HeartFilled else WireframeIcons.Heart,
@@ -749,7 +732,7 @@ private fun HomeConsoleRow(
                 }
             }
             item(key = "all") {
-                Box(Modifier.entry(filter is LibraryFilter.All, LibraryFilter.All)) {
+                Box {
                 SidebarIconButton(
                     selected = filter is LibraryFilter.All,
                     icon = WireframeIcons.AllGames,
@@ -762,7 +745,7 @@ private fun HomeConsoleRow(
                 Box(Modifier.width(1.dp).height(28.dp * adaptiveSpec.uiScale).background(chromeColors.divider))
             }
             items(systems, key = { it.name }) { system ->
-                Box(Modifier.entry((filter as? LibraryFilter.System)?.metaSystemID == system, LibraryFilter.System(system))) {
+                Box {
                 SidebarSystemLogoButton(
                     meta = system,
                     selected = (filter as? LibraryFilter.System)?.metaSystemID == system,
@@ -1359,7 +1342,7 @@ private fun LayoutToggleIcon(
             imageVector = icon,
             contentDescription = contentDescription,
             modifier = Modifier.size(iconSize),
-            tint = if (selected) LibraryNeonGreen else chromeColors.muted,
+            tint = if (selected) accentColor else chromeColors.muted,
         )
     }
 }
