@@ -18,6 +18,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.material3.MaterialTheme
 import com.omnidroid.app.mobile.shared.controller.controllerFocusGlow
 
 @Composable
@@ -37,6 +41,15 @@ internal fun chromeButtonSize(): Dp {
 /** One gap for everything on the right of the top bar: status items, the divider and buttons. */
 @Composable
 internal fun chromeItemGap(): Dp = chromeButtonSize() * 0.27f
+
+/** One text style for the top bar: search, status read-outs and labels. */
+@Composable
+internal fun chromeTextStyle(): TextStyle =
+    MaterialTheme.typography.labelLarge.copy(
+        fontSize = 13.sp * LocalAdaptiveLayout.current.uiScale,
+        fontWeight = FontWeight.Medium,
+        letterSpacing = 0.sp,
+    )
 
 /** Icon size inside a [chromeButtonSize] button, keeping the wireframe's 20 / 44 ratio. */
 @Composable

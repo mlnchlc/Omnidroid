@@ -111,6 +111,7 @@ import com.omnidroid.app.mobile.shared.compose.ui.FloatingChromeButton
 import com.omnidroid.app.mobile.shared.compose.ui.chromeButtonSize
 import com.omnidroid.app.mobile.shared.compose.ui.chromeIconSize
 import com.omnidroid.app.mobile.shared.compose.ui.chromeItemGap
+import com.omnidroid.app.mobile.shared.compose.ui.chromeTextStyle
 import com.omnidroid.app.mobile.shared.compose.ui.WireframeIcons
 import com.omnidroid.app.mobile.shared.compose.ui.LibraryNeonGreen
 import com.omnidroid.app.mobile.shared.compose.ui.LocalAdaptiveLayout
@@ -422,7 +423,7 @@ private fun LibrarySortButton(
             imageVector = Icons.AutoMirrored.Filled.Sort,
             contentDescription = stringResource(R.string.library_sort),
             tint = if (sort != LibrarySort.TITLE) LibraryNeonGreen else chromeColors.muted,
-            modifier = Modifier.size(16.dp * scale),
+            modifier = Modifier.size(chromeIconSize()),
         )
     }
 }
@@ -619,7 +620,7 @@ internal fun LibrarySearchField(
             Icon(
                 imageVector = WireframeIcons.Search,
                 contentDescription = stringResource(R.string.title_search),
-                modifier = Modifier.size(16.dp * scale),
+                modifier = Modifier.size(chromeIconSize()),
                 tint = chromeColors.muted,
             )
             BasicTextField(
@@ -644,11 +645,7 @@ internal fun LibrarySearchField(
                         },
                 singleLine = true,
                 cursorBrush = SolidColor(chromeColors.content),
-                textStyle =
-                    TextStyle(
-                        color = chromeColors.content,
-                        fontSize = (13 * scale).sp,
-                    ),
+                textStyle = chromeTextStyle().copy(color = chromeColors.content),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
                 decorationBox = { inner ->
@@ -657,7 +654,7 @@ internal fun LibrarySearchField(
                             Text(
                                 text = stringResource(R.string.title_search),
                                 color = chromeColors.faint,
-                                fontSize = (13 * scale).sp,
+                                style = chromeTextStyle(),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                             )

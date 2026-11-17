@@ -36,7 +36,7 @@ fun WifiArcsIcon(
     Canvas(
         modifier =
             modifier
-                .size(14.5.dp)
+                .size(chromeIconSize())
                 .semantics { this.contentDescription = contentDescription },
     ) {
         val strokeWidth = size.minDimension * 0.11f
