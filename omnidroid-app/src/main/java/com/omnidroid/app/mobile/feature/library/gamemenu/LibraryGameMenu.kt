@@ -64,6 +64,9 @@ import com.omnidroid.app.mobile.shared.compose.gamemenu.MenuDrawableIcon
 import com.omnidroid.app.mobile.shared.compose.sidemenu.MenuAction
 import com.omnidroid.app.mobile.shared.compose.sidemenu.MenuLink
 import com.omnidroid.app.mobile.shared.compose.sidemenu.MenuSection
+import com.omnidroid.app.mobile.shared.compose.sidemenu.MenuTile
+import com.omnidroid.app.mobile.shared.compose.sidemenu.MenuTiles
+import com.omnidroid.app.mobile.feature.gamemenu.GameMenuHeader
 import com.omnidroid.app.mobile.shared.compose.sidemenu.SideMenuDestination
 import com.omnidroid.app.mobile.shared.compose.sidemenu.SideMenuNavHost
 import com.omnidroid.app.mobile.shared.compose.sidemenu.SideMenuPage
@@ -159,6 +162,8 @@ fun LibraryGameMenu(
                     state = menu, title = stringResource(page.titleRes), canGoBack = page.parent != null,
                     onBack = { navController.popBackStack() },
                     bottomReserved = if (gamepadConnected) ControllerHintBarRowHeight else 0.dp,
+                    // Same header as the in-game menu: cover, name, system and play time, close.
+                    homeHeader = { onClose -> GameMenuHeader(game, onClose) },
                     onClosed = {
                         if (selectedGameState.value?.id == sessionGame.id) selectedGameState.value = null
                         retained = null
@@ -223,17 +228,25 @@ private fun LibraryGameMenuRoot(
     val override by cloudChanges.collectAsState(cloud.getOverride(game.id))
     val speedSupported = remember(game.systemId) { runCatching { GameSystem.findById(game.systemId).fastForwardSupport }.getOrDefault(false) }
     SideMenuPage("library-game") {
-        MenuSection("identity") { ContextActionHeader(game) }
-        MenuSection("commands") {
-            MenuAction("resume", titleRes = R.string.game_context_menu_resume,
-                icon = { Icon(Icons.Default.PlayArrow, contentDescription = null) }, onClick = onPlay)
-            MenuAction("restart", titleRes = R.string.game_context_menu_restart,
-                icon = { MenuDrawableIcon(R.drawable.ic_menu_restart) }, onClick = onRestart)
-            MenuAction("favorite", titleRes = if (game.isFavorite) R.string.game_context_menu_remove_from_favorites else R.string.game_context_menu_add_to_favorites,
-                icon = { Icon(if (game.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                    contentDescription = null, tint = if (game.isFavorite) LibraryNeonGreen else LocalContentColor.current) },
-            ) { actions.favorite(game, !game.isFavorite) }
-        }
+        // Tiles as in the in-game menu: the main commands one press away, Play highlighted.
+        val favoriteLabel =
+            stringResource(if (game.isFavorite) R.string.game_context_menu_remove_from_favorites else R.string.game_context_menu_add_to_favorites)
+        MenuTiles(
+            "commands",
+            listOf(
+                MenuTile("resume", stringResource(R.string.game_context_menu_resume),
+                    { Icon(Icons.Default.PlayArrow, contentDescription = null) }, highlighted = true, onClick = onPlay),
+                MenuTile("restart", stringResource(R.string.game_context_menu_restart),
+                    { MenuDrawableIcon(R.drawable.ic_menu_restart) }, onClick = onRestart),
+                MenuTile("favorite", stringResource(R.string.favorites), {
+                    Icon(
+                        if (game.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                        contentDescription = favoriteLabel,
+                        tint = if (game.isFavorite) LibraryNeonGreen else LocalContentColor.current,
+                    )
+                }) { actions.favorite(game, !game.isFavorite) },
+            ),
+        )
         MenuSection("playback", visible = speedSupported || syncSupported) {
             if (speedSupported) FrameSpeedMenuChoice(speed) { actions.frameSpeed(game, it) }
             if (syncSupported) {
@@ -269,50 +282,6 @@ private fun GameAppearancePage(
             if (customName) MenuAction("remove-name", titleRes = R.string.game_context_menu_remove_name,
                 icon = { Icon(Icons.Default.Close, contentDescription = null) },
             ) { actions.removeName(game) }
-        }
-    }
-}
-
-@Composable
-private fun ContextActionHeader(game: Game) {
-    Row(
-        modifier =
-            Modifier.padding(
-                start = 16.dp,
-                top = 8.dp,
-                bottom = 8.dp,
-                end = 16.dp,
-            ),
-    ) {
-        OmnidroidSmallGameImage(
-            modifier =
-                Modifier
-                    .width(56.dp)
-                    .align(Alignment.CenterVertically)
-                    .clip(RoundedCornerShape(4.dp)),
-            game = game,
-        )
-        Column(
-            modifier =
-                Modifier
-                    .weight(1f)
-                    .align(Alignment.CenterVertically)
-                    .padding(start = 12.dp),
-        ) {
-            Text(
-                text = game.displayName,
-                style =
-                    MaterialTheme.typography.titleSmall.copy(
-                        fontWeight = FontWeight.SemiBold,
-                    ),
-                color = chromeColors.content,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-            LibraryGameSubtext(
-                game = game,
-                modifier = Modifier.padding(top = 2.dp),
-            )
         }
     }
 }
