@@ -170,32 +170,45 @@ internal fun HomeActions(
     onFavoriteToggle: (Game, Boolean) -> Unit,
     onMore: () -> Unit,
     modifier: Modifier = Modifier,
+    /** Smaller buttons for the landscape carousel, where they share the space with the title. */
+    compact: Boolean = false,
 ) {
+    val height = if (compact) 38.dp else 52.dp
     // Paging only re-emits the game after the database write lands, so flip the heart immediately.
     var favorite by remember(game?.id, game?.isFavorite) { mutableStateOf(game?.isFavorite == true) }
     Row(
         modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
+        horizontalArrangement = Arrangement.spacedBy(if (compact) 8.dp else 12.dp, if (compact) Alignment.Start else Alignment.CenterHorizontally),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Surface(
             onClick = onPlay,
-            modifier = Modifier.weight(1f).widthIn(max = 240.dp).height(52.dp).controllerFocusGlow(CircleShape),
+            modifier =
+                (if (compact) Modifier.widthIn(min = 132.dp) else Modifier.weight(1f).widthIn(max = 240.dp))
+                    .height(height)
+                    .controllerFocusGlow(CircleShape),
             shape = CircleShape,
             color = LibraryNeonGreen,
             contentColor = Color(0xFF0A0A0A),
         ) {
-            Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                Icon(WireframeIcons.Play, contentDescription = null, modifier = Modifier.size(20.dp))
+            Row(
+                modifier = Modifier.padding(horizontal = if (compact) 18.dp else 0.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(WireframeIcons.Play, contentDescription = null, modifier = Modifier.size(if (compact) 16.dp else 20.dp))
                 Spacer(Modifier.width(8.dp))
                 Text(
                     text = stringResource(if (continueGame) R.string.continue_playing else R.string.library_console_start),
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    style =
+                        (if (compact) MaterialTheme.typography.labelLarge else MaterialTheme.typography.titleMedium)
+                            .copy(fontWeight = FontWeight.Bold),
                     maxLines = 1,
                 )
             }
         }
         HomeRoundButton(
+            size = height,
             onClick = {
                 game?.let {
                     favorite = !favorite
@@ -212,7 +225,7 @@ internal fun HomeActions(
                 tint = if (favorite) LibraryNeonGreen else chromeColors.content,
             )
         }
-        HomeRoundButton(onClick = onMore) {
+        HomeRoundButton(size = height, onClick = onMore) {
             Icon(WireframeIcons.More, contentDescription = stringResource(R.string.game_settings), tint = chromeColors.content)
         }
     }
@@ -220,12 +233,13 @@ internal fun HomeActions(
 
 @Composable
 private fun HomeRoundButton(
+    size: Dp,
     onClick: () -> Unit,
     content: @Composable () -> Unit,
 ) {
     Surface(
         onClick = onClick,
-        modifier = Modifier.size(52.dp).controllerFocusGlow(CircleShape),
+        modifier = Modifier.size(size).controllerFocusGlow(CircleShape),
         shape = CircleShape,
         color = chromeColors.panel,
         border = BorderStroke(1.dp, chromeColors.panelBorder),

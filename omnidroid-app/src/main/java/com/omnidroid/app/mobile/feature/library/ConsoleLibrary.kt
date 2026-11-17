@@ -440,7 +440,7 @@ private fun ConsoleCarouselState.settledAmount(): Float {
     return 1f - (abs(p - p.roundToInt()) * 2.5f).coerceIn(0f, 1f)
 }
 
-private class LandscapeMetrics(maxWidth: Dp, maxHeight: Dp) {
+private class LandscapeMetrics(maxWidth: Dp, maxHeight: Dp, home: Boolean = false) {
     val edge = if (maxHeight < 280.dp) 16.dp else 20.dp
     val gap = 12.dp
     val bigHeight = (maxHeight - edge * 2).coerceIn(96.dp, 440.dp)
@@ -448,9 +448,11 @@ private class LandscapeMetrics(maxWidth: Dp, maxHeight: Dp) {
     val smallHeight = bigHeight * 0.55f
     val smallWidth = smallHeight * LibraryGameCardAspectRatio
     val top = ((maxHeight - bigHeight) / 2).coerceAtLeast(0.dp)
-    val anchorX = edge + smallWidth + gap - (if (maxHeight < 280.dp) 16.dp else 24.dp)
+    // Home lines the selected card up with the top bar and console row (leaving room for its ring);
+    // the console view lets the previous game peek in on the left.
+    val anchorX = if (home) HomeRingSpace else edge + smallWidth + gap - (if (maxHeight < 280.dp) 16.dp else 24.dp)
     val infoX = anchorX + bigWidth + gap * 1.5f
-    val infoWidth = (maxWidth - infoX - edge).coerceAtLeast(0.dp)
+    val infoWidth = (maxWidth - infoX - (if (home) 0.dp else edge)).coerceAtLeast(0.dp)
     val infoHeight = (bigHeight - smallHeight - gap).coerceAtLeast(0.dp)
     val compactInfo = infoHeight < 110.dp
     val step = smallWidth + gap
@@ -476,7 +478,8 @@ private fun ConsoleLandscapeCarousel(
     // Glow sits outside sharedBounds, so hide it while the cover flies to/from details.
     val coverTransitioning = sharedTransitionScope.isTransitionActive
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-        val metrics = remember(maxWidth, maxHeight) { LandscapeMetrics(maxWidth, maxHeight) }
+        val home = LocalHomeCarouselStyle.current
+        val metrics = remember(maxWidth, maxHeight, home) { LandscapeMetrics(maxWidth, maxHeight, home) }
         val first = (selectedIndex - 2).coerceAtLeast(0)
         val last = (selectedIndex + metrics.visibleAfter).coerceAtMost(items.count - 1)
         val stepPx = with(LocalDensity.current) { metrics.step.toPx() }
@@ -731,6 +734,7 @@ private fun LandscapeInfoPanel(
                 onPlay = onPlay,
                 onFavoriteToggle = onFavoriteToggle,
                 onMore = { onSettings(game) },
+                compact = true,
             )
             return@Column
         }
