@@ -249,7 +249,7 @@ fun LibraryTopBar(
                         Spacer(modifier = Modifier.width(8.dp))
                         searchField(Modifier.weight(1f))
                         if (afterSearch != null && !searchExpanded) {
-                            Spacer(modifier = Modifier.width(8.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
                             afterSearch()
                         }
                     }
