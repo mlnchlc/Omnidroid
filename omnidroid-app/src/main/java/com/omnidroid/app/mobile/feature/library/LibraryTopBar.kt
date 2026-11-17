@@ -139,6 +139,8 @@ fun LibraryTopBar(
     portrait: Boolean = false,
     showLibraryControls: Boolean = true,
     onBackPressed: (() -> Unit)? = null,
+    /** Shown right after search in landscape, in place of the console name (Home's view switch). */
+    afterSearch: (@Composable () -> Unit)? = null,
 ) {
     val spec = LocalAdaptiveLayout.current
     val chromeIconSize = 20.dp * spec.uiScale
@@ -204,10 +206,6 @@ fun LibraryTopBar(
     }
     val actions: @Composable () -> Unit = {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            if (portrait) {
-                ProfileChromeButton(onClick = onProfilePressed, iconSize = chromeIconSize)
-                Spacer(modifier = Modifier.width(6.dp))
-            }
             LibraryUtilityButtons(
                 hasSecondaryOutput = hasSecondaryOutput,
                 iconSize = chromeIconSize,
@@ -234,9 +232,16 @@ fun LibraryTopBar(
             syncProgress = syncProgress,
             onBackPressed = onBackPressed,
             controlsVisible = showLibraryControls,
+            // Status (Wi-Fi, battery, time) has no room beside search and the buttons in portrait.
+            showStatus = !(portrait && showLibraryControls),
             leadingContent = {
                 if (portrait) {
-                    actions()
+                    // One row, as in landscape: logo, search, then the round buttons.
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        ProfileChromeButton(onClick = onProfilePressed, iconSize = chromeIconSize)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        searchField(Modifier.weight(1f))
+                    }
                 } else {
                     // The logo leads the bar, as on console home screens, and opens Profile.
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -246,12 +251,12 @@ fun LibraryTopBar(
                             consoleTitleId = consoleTitleId,
                             consoleGameCount = consoleGameCount,
                             searchField = searchField,
+                            afterSearch = afterSearch,
                         )
                     }
                 }
             },
-            trailingContent = if (portrait) null else actions,
-            bottomContent = if (portrait) ({ searchField(Modifier.fillMaxWidth()) }) else null,
+            trailingContent = actions,
         )
         LibrarySortMenu(menu = sortMenu, sort = sort, onSortChange = onSortChange)
     }
@@ -263,6 +268,7 @@ private fun LibrarySearchRow(
     consoleTitleId: Int?,
     consoleGameCount: Int?,
     searchField: @Composable (Modifier) -> Unit,
+    afterSearch: (@Composable () -> Unit)? = null,
 ) {
     val spec = LocalAdaptiveLayout.current
     // Keep the last label available while its exit animation finishes.
@@ -281,8 +287,12 @@ private fun LibrarySearchRow(
         )
         Row(modifier = Modifier.fillMaxWidth().clipToBounds(), verticalAlignment = Alignment.CenterVertically) {
             searchField(Modifier.width(searchWidth))
+            if (afterSearch != null && !expanded) {
+                Spacer(modifier = Modifier.width(10.dp))
+                afterSearch()
+            }
             AnimatedVisibility(
-                visible = !expanded && consoleTitleId != null,
+                visible = !expanded && consoleTitleId != null && afterSearch == null,
                 enter = fadeIn(tween(180)) + expandHorizontally(expandFrom = Alignment.Start),
                 exit = fadeOut(tween(180)) + shrinkHorizontally(shrinkTowards = Alignment.Start),
             ) {
