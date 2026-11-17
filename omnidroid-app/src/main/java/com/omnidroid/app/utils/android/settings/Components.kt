@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -344,21 +345,15 @@ fun OmnidroidSettingsSegmented(
     subtitle: (@Composable () -> Unit)? = subtitleRes?.let { { Text(stringResource(it)) } },
 ) {
     val container = settingsRowContainerColor() ?: Color.Transparent
-    Row(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .background(container)
-                .padding(horizontal = 16.dp, vertical = 10.dp)
-                .alpha(if (enabled) 1f else 0.45f),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(Modifier.weight(1f).padding(end = 12.dp)) {
+    val label: @Composable (Modifier) -> Unit = { labelModifier ->
+        Column(labelModifier) {
             ProvideTextStyle(MaterialTheme.typography.bodyLarge.copy(color = chromeColors.content)) { title() }
             if (subtitle != null) {
                 ProvideTextStyle(MaterialTheme.typography.bodySmall.copy(color = chromeColors.muted)) { subtitle() }
             }
         }
+    }
+    val segments: @Composable () -> Unit = {
         Row(
             modifier =
                 Modifier
@@ -367,7 +362,7 @@ fun OmnidroidSettingsSegmented(
                     .selectableGroup(),
             horizontalArrangement = Arrangement.spacedBy(2.dp),
         ) {
-            items.forEachIndexed { index, label ->
+            items.forEachIndexed { index, item ->
                 val selected = index == state.value
                 Box(
                     modifier =
@@ -380,12 +375,34 @@ fun OmnidroidSettingsSegmented(
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        label,
+                        item,
                         style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
                         color = if (selected) chromeColors.panel else chromeColors.content,
                         maxLines = 1,
                     )
                 }
+            }
+        }
+    }
+    BoxWithConstraints(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .background(container)
+                .padding(horizontal = 16.dp, vertical = 10.dp)
+                .alpha(if (enabled) 1f else 0.45f),
+    ) {
+        // Beside the title when there is room for both, otherwise below it.
+        val stacked = maxWidth < 220.dp + 76.dp * items.size
+        if (stacked) {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                label(Modifier.fillMaxWidth())
+                segments()
+            }
+        } else {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                label(Modifier.weight(1f).padding(end = 12.dp))
+                segments()
             }
         }
     }
