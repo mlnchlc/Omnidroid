@@ -8,8 +8,9 @@ import kotlin.math.sign
  *
  * - One tilt is one press: it presses at [pressThreshold] and only lets go below [releaseThreshold],
  *   so a stick hovering near the edge doesn't press again and again.
- * - The spring back past the centre after letting go reads as the opposite direction; that rebound
- *   is ignored for [reboundMs], so a flick forth and back counts once.
+ * - The spring back past the centre after letting go reads as the opposite direction. A rebound is
+ *   quick and shallow, so an opposite tilt within [reboundMs] that stays under [reboundMaxLean] is
+ *   ignored (a flick forth and back counts once); a deliberate flick back goes further and counts.
  * - Holding the stick repeats, but only after [holdDelayMs], every [holdRepeatMs].
  *
  * Pure (time is passed in) so it can be unit tested.
@@ -17,7 +18,8 @@ import kotlin.math.sign
 class StickPressFilter(
     private val pressThreshold: Float = 0.6f,
     private val releaseThreshold: Float = 0.3f,
-    private val reboundMs: Long = 300L,
+    private val reboundMs: Long = 150L,
+    private val reboundMaxLean: Float = 0.85f,
     private val holdDelayMs: Long = 550L,
     private val holdRepeatMs: Long = 180L,
 ) {
@@ -69,7 +71,8 @@ class StickPressFilter(
         val dx = if (ax >= ay) sign(x).toInt() else 0
         val dy = if (ax >= ay) 0 else sign(y).toInt()
         val sinceRelease = now - releasedAt
-        if (sinceRelease < reboundMs && dx == -releasedX && dy == -releasedY) return null
+        val opposite = dx == -releasedX && dy == -releasedY
+        if (opposite && sinceRelease < reboundMs && maxOf(ax, ay) < reboundMaxLean) return null
         heldX = dx
         heldY = dy
         pressedAt = now

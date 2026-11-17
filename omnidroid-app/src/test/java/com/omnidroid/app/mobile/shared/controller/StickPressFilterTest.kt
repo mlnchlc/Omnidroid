@@ -74,6 +74,23 @@ class StickPressFilterTest {
     }
 
     @Test
+    fun `a quick deliberate flick back counts`() {
+        val filter = StickPressFilter()
+        val result =
+            presses(
+                filter,
+                listOf(
+                    Triple(1f, 0f, 0L),
+                    Triple(0.1f, 0f, 40L),
+                    // Pushed hard the other way right after: a real press, not a rebound.
+                    Triple(-1f, 0f, 70L),
+                    Triple(0f, 0f, 110L),
+                ),
+            )
+        assertEquals(listOf(StickPressFilter.Press(1, 0), StickPressFilter.Press(-1, 0)), result)
+    }
+
+    @Test
     fun `a diagonal presses only the stronger direction`() {
         val filter = StickPressFilter()
         assertEquals(StickPressFilter.Press(0, 1), filter.update(0.65f, 0.8f, 0L))
