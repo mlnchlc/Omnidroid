@@ -609,6 +609,16 @@ class MainActivity : RetrogradeComponentActivity(), BusyActivity {
                         ) { entry ->
                             val gameId = entry.arguments?.getInt("gameId") ?: return@composable
                             val initialGame = lastClickedGame?.takeIf { it.id == gameId }
+                            var coverSearchGame by remember { mutableStateOf<Game?>(null) }
+                            coverSearchGame?.let { searched ->
+                                CoverSearchDialog(
+                                    searched,
+                                    coverSearcher,
+                                    onDismiss = { coverSearchGame = null },
+                                    onUpdateCoverOnly = { url -> gameInteractor.onSetCoverUrl(searched, url) },
+                                    onFixFullMatch = { title, url -> gameInteractor.onFixGameMatch(searched, title, url) },
+                                )
+                            }
                             GameDetailsScreen(
                                 modifier =
                                     Modifier
@@ -640,6 +650,8 @@ class MainActivity : RetrogradeComponentActivity(), BusyActivity {
                                 onOpenSettings = { selectedGameState.value = it },
                                 onSetCustomName = { game, name -> gameInteractor.onSetCustomName(game, name) },
                                 onSetCustomThumbnail = { game, uri -> gameInteractor.onSetCustomCover(game, uri) },
+                                onSearchCover = { coverSearchGame = it },
+                                onRemoveCover = { gameInteractor.onRemoveCustomCover(it) },
                                 backdropTopBleed = standardTopPadding,
                             )
                         }
@@ -923,7 +935,7 @@ class MainActivity : RetrogradeComponentActivity(), BusyActivity {
     }
 
     override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
-        if (controllerBridge.dispatchMotion(event) { super.dispatchKeyEvent(it) }) {
+        if (controllerBridge.dispatchMotion(event, controllerBridge.keyed(this) { super.dispatchKeyEvent(it) })) {
             return true
         }
         return super.dispatchGenericMotionEvent(event)
