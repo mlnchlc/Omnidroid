@@ -27,7 +27,7 @@ import androidx.paging.PagingSource
 import androidx.paging.PagingState
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
-import com.omnidroid.app.mobile.feature.library.LibraryLayout
+import com.omnidroid.app.mobile.feature.library.HomeView
 import com.omnidroid.app.mobile.feature.library.LibraryPagedContent
 import com.omnidroid.app.mobile.feature.library.LibraryPagedItems
 import com.omnidroid.app.mobile.feature.library.LibraryPaging
@@ -57,7 +57,7 @@ class LibraryPagingRegressionTest {
             sources.incrementAndGet()
             FixtureSource(total, loads)
         }
-        val layout = mutableStateOf(LibraryLayout.LIST)
+        val layout = mutableStateOf(HomeView.LIST)
         var presented: LazyPagingItems<Game>? = null
         compose.setContent {
             val games = pager.flow.collectAsLazyPagingItems()
@@ -98,9 +98,9 @@ class LibraryPagingRegressionTest {
         }
 
         // Both renderers use the same paging/key contract, including after a mode change.
-        compose.runOnUiThread { layout.value = LibraryLayout.GRID }
+        compose.runOnUiThread { layout.value = HomeView.GRID }
         jumpTo(19_999)
-        compose.runOnUiThread { layout.value = LibraryLayout.LIST }
+        compose.runOnUiThread { layout.value = HomeView.LIST }
         compose.waitUntil(15_000) {
             compose.onAllNodes(hasText(title(13_900)) or hasContentDescription(title(13_900)))
                 .fetchSemanticsNodes().isNotEmpty()
@@ -117,7 +117,7 @@ class LibraryPagingRegressionTest {
             compose.activity.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
         }
         val zoom = mutableIntStateOf(0)
-        val layout = mutableStateOf(LibraryLayout.GRID)
+        val layout = mutableStateOf(HomeView.GRID)
         val data = flowOf(PagingData.from((1..20).map(::fixture)))
         compose.setContent { FixtureLibrary(data.collectAsLazyPagingItems(), layout.value, zoom.intValue) }
         for (density in 0..2) {
@@ -126,14 +126,14 @@ class LibraryPagingRegressionTest {
             compose.waitForIdle()
             assertTrue(compose.onAllNodes(hasContentDescription(title(1))).fetchSemanticsNodes().isNotEmpty())
         }
-        compose.runOnUiThread { layout.value = LibraryLayout.LIST }
+        compose.runOnUiThread { layout.value = HomeView.LIST }
         compose.waitForIdle()
         assertTrue(compose.onAllNodes(hasText(title(1))).fetchSemanticsNodes().isNotEmpty())
     }
 
     @OptIn(ExperimentalSharedTransitionApi::class)
     @Composable
-    private fun FixtureLibrary(games: LazyPagingItems<Game>, layout: LibraryLayout, zoom: Int) {
+    private fun FixtureLibrary(games: LazyPagingItems<Game>, layout: HomeView, zoom: Int) {
         AppTheme {
             BoxWithConstraints(Modifier.fillMaxSize()) {
                 CompositionLocalProvider(
@@ -145,7 +145,7 @@ class LibraryPagingRegressionTest {
                             LibraryPagedContent(
                                 games = games,
                                 featured = fixture(1), // Also appears as the first ordinary item.
-                                layout = layout,
+                                list = layout == HomeView.LIST,
                                 zoomDensity = zoom,
                                 portrait = maxHeight > maxWidth,
                                 sharedTransitionScope = shared,
