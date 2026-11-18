@@ -22,7 +22,7 @@ import androidx.compose.ui.unit.dp
 import com.omnidroid.app.mobile.shared.controller.controllerFocusGlow
 
 /**
- * A pill of mutually exclusive segments: settings choices, Home's Carousel / Grid / List switch.
+ * A pill of mutually exclusive segments: settings choices, Home's Console / Grid / List switch.
  * The selected segment is filled with the accent ([selectionColors]); [content] draws each
  * segment's label or icon in the colours it is given.
  *

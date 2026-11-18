@@ -2,8 +2,8 @@ package com.omnidroid.app.mobile.feature.settings.uiscale
 
 import com.omnidroid.app.mobile.shared.compose.ui.rememberContentEdges
 import com.omnidroid.app.mobile.shared.compose.ui.contentEdge
-import com.omnidroid.app.mobile.feature.library.HomeViewControl
-import com.omnidroid.app.mobile.feature.library.HomeView
+import com.omnidroid.app.mobile.feature.library.LibraryLayoutControl
+import com.omnidroid.app.mobile.feature.library.LibraryLayout
 import com.omnidroid.app.mobile.feature.library.HomeConsoleRow
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
@@ -86,7 +86,7 @@ fun UiScalePreviewScreen(
 
     var currentStep by rememberSaveable { mutableIntStateOf(initialStep) }
     var previewFilter by remember { mutableStateOf<LibraryFilter>(LibraryFilter.All) }
-    var previewView by remember { mutableStateOf(HomeView.CAROUSEL) }
+    var previewLayout by remember { mutableStateOf(LibraryLayout.CONSOLE) }
 
     val displaySystems =
         remember(availableConsoles) {
@@ -145,7 +145,7 @@ fun UiScalePreviewScreen(
                     onProfilePressed = {},
                     portrait = portrait,
                     afterSearch = { room ->
-                        HomeViewControl(view = previewView, onViewChange = { previewView = it }, portrait = portrait, room = room)
+                        LibraryLayoutControl(layout = previewLayout, onLayoutChange = { previewLayout = it }, portrait = portrait, room = room)
                     },
                 )
             }
