@@ -23,6 +23,9 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -69,6 +72,9 @@ import com.omnidroid.app.mobile.feature.displays.DisplaysDialog
 import com.omnidroid.app.mobile.feature.gamedetails.GameDetailsScreen
 import com.omnidroid.app.mobile.feature.gamedetails.GameDetailsViewModel
 import com.omnidroid.app.mobile.feature.library.LibraryFilter
+import com.omnidroid.app.mobile.feature.library.HomeViewCycleButton
+import com.omnidroid.app.mobile.feature.library.HomeViewSwitch
+import com.omnidroid.app.mobile.feature.library.homeViewSwitchWidth
 import com.omnidroid.app.mobile.feature.library.LibraryLayout
 import com.omnidroid.app.mobile.feature.library.LibraryScreen
 import com.omnidroid.app.mobile.feature.library.LibraryStartupStore
@@ -91,9 +97,11 @@ import com.omnidroid.app.mobile.shared.compose.dialog.OmnidroidDialogButton
 import com.omnidroid.app.mobile.shared.compose.ui.AppTheme
 import com.omnidroid.app.mobile.shared.compose.ui.GameCoverOrigin
 import com.omnidroid.app.mobile.shared.compose.ui.LocalAdaptiveLayout
+import com.omnidroid.app.mobile.shared.compose.ui.cutoutTopInset
 import com.omnidroid.app.mobile.shared.compose.ui.calculateAdaptiveLayoutSpec
 import com.omnidroid.app.mobile.shared.compose.ui.homeChromeColor
 import com.omnidroid.app.mobile.shared.controller.ControllerHintBar
+import com.omnidroid.app.mobile.shared.controller.ControllerHintBarRowHeight
 import com.omnidroid.app.mobile.shared.controller.ControllerHints
 import com.omnidroid.app.mobile.shared.controller.ControllerInputBridge
 import com.omnidroid.app.mobile.shared.controller.ControllerNavigationState
@@ -372,7 +380,7 @@ class MainActivity : RetrogradeComponentActivity(), BusyActivity {
                     .value
                     .any { it.getOmnidroidInputDevice() is OmnidroidInputDeviceGamePad }
 
-            val isGrid = libraryState.layout == LibraryLayout.GRID
+            val isGrid = libraryState.contentLayout == LibraryLayout.GRID
             val libraryHints =
                 ControllerHints.library(
                     switchConsoles = stringResource(R.string.controller_hint_switch_consoles),
@@ -406,7 +414,7 @@ class MainActivity : RetrogradeComponentActivity(), BusyActivity {
                     back = stringResource(R.string.controller_hint_back),
                 )
 
-            LaunchedEffect(currentRoute, selectedGameState.value, libraryState.layout) {
+            LaunchedEffect(currentRoute, selectedGameState.value, libraryState.contentLayout) {
                 controllerNav.setHints(
                     when {
                         selectedGameState.value != null -> simpleHints
@@ -533,9 +541,9 @@ class MainActivity : RetrogradeComponentActivity(), BusyActivity {
                 }
             val portrait = maxHeight > maxWidth
             val portraitColumnWidth = maxWidth
-            val libraryTopPadding =
-                if (portrait) adaptiveSpec.topBarPortraitHeight else adaptiveSpec.topBarRowHeight
-            val standardTopPadding = adaptiveSpec.topBarRowHeight
+            // The library bar is one row in both orientations, below any punch-hole at the top.
+            val libraryTopPadding = adaptiveSpec.topBarRowHeight + cutoutTopInset()
+            val standardTopPadding = libraryTopPadding
             CompositionLocalProvider(
                 LocalControllerNavigation provides controllerNav,
                 LocalAdaptiveLayout provides adaptiveSpec,
@@ -546,11 +554,15 @@ class MainActivity : RetrogradeComponentActivity(), BusyActivity {
                 containerColor = homeChromeColor,
                 contentWindowInsets = WindowInsets(0, 0, 0, 0),
                 bottomBar = {
-                    if (gamepadConnected && controllerNav.modalNavigation == null) {
-                        ControllerHintBar(
-                            visible = true,
-                            hints = controllerNav.hints.value,
-                        )
+                    if (gamepadConnected) {
+                        // The space stays while a sheet shows its own hints over it, so the page
+                        // behind doesn't jump when the sheet opens and closes.
+                        Box(Modifier.fillMaxWidth().height(ControllerHintBarRowHeight)) {
+                            ControllerHintBar(
+                                visible = controllerNav.modalNavigation == null,
+                                hints = controllerNav.hints.value,
+                            )
+                        }
                     }
                 },
             ) { padding ->
@@ -608,6 +620,16 @@ class MainActivity : RetrogradeComponentActivity(), BusyActivity {
                         ) { entry ->
                             val gameId = entry.arguments?.getInt("gameId") ?: return@composable
                             val initialGame = lastClickedGame?.takeIf { it.id == gameId }
+                            var coverSearchGame by remember { mutableStateOf<Game?>(null) }
+                            coverSearchGame?.let { searched ->
+                                CoverSearchDialog(
+                                    searched,
+                                    coverSearcher,
+                                    onDismiss = { coverSearchGame = null },
+                                    onUpdateCoverOnly = { url -> gameInteractor.onSetCoverUrl(searched, url) },
+                                    onFixFullMatch = { title, url -> gameInteractor.onFixGameMatch(searched, title, url) },
+                                )
+                            }
                             GameDetailsScreen(
                                 modifier =
                                     Modifier
@@ -639,6 +661,8 @@ class MainActivity : RetrogradeComponentActivity(), BusyActivity {
                                 onOpenSettings = { selectedGameState.value = it },
                                 onSetCustomName = { game, name -> gameInteractor.onSetCustomName(game, name) },
                                 onSetCustomThumbnail = { game, uri -> gameInteractor.onSetCustomCover(game, uri) },
+                                onSearchCover = { coverSearchGame = it },
+                                onRemoveCover = { gameInteractor.onRemoveCustomCover(it) },
                                 backdropTopBleed = standardTopPadding,
                             )
                         }
@@ -859,6 +883,33 @@ class MainActivity : RetrogradeComponentActivity(), BusyActivity {
 
             if (currentRoute != MainRoute.SETTINGS_UI_SCALE) {
                 LibraryTopBar(
+                    afterSearch =
+                        if (currentRoute == MainRoute.HOME && libraryState.layout == LibraryLayout.HOME) {
+                            { room ->
+                                // The three-way switch when it fits beside search, else one button
+                                // that steps through the views (portrait, narrow 4:3 screens).
+                                if (portrait || room < homeViewSwitchWidth()) {
+                                    HomeViewCycleButton(
+                                        view = libraryState.homeView,
+                                        onViewChange = { libraryViewModel.setHomeView(it) },
+                                    )
+                                } else {
+                                    HomeViewSwitch(
+                                        view = libraryState.homeView,
+                                        onViewChange = { libraryViewModel.setHomeView(it) },
+                                    )
+                                }
+                            }
+                        } else {
+                            null
+                        },
+                    pageTitle =
+                        when (currentRoute) {
+                            MainRoute.SETTINGS -> stringResource(R.string.settings)
+                            MainRoute.PROFILE -> stringResource(R.string.title_profile)
+                            MainRoute.ADD_CONSOLES -> stringResource(R.string.title_add_console)
+                            else -> null
+                        },
                     modifier = Modifier.fillMaxSize(),
                     bottomPadding = padding.calculateBottomPadding(),
                     syncProgress = libraryState.syncProgress,
@@ -922,7 +973,7 @@ class MainActivity : RetrogradeComponentActivity(), BusyActivity {
     }
 
     override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
-        if (controllerBridge.dispatchMotion(event) { super.dispatchKeyEvent(it) }) {
+        if (controllerBridge.dispatchMotion(event, controllerBridge.keyed(this) { super.dispatchKeyEvent(it) })) {
             return true
         }
         return super.dispatchGenericMotionEvent(event)

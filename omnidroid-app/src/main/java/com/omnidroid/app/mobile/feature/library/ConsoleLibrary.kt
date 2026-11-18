@@ -1,9 +1,14 @@
 package com.omnidroid.app.mobile.feature.library
 
+import com.omnidroid.app.mobile.shared.compose.ui.libraryAccentColor
+import com.omnidroid.app.mobile.shared.compose.ui.OnLibraryNeonGreen
+import androidx.compose.runtime.SideEffect
+import com.omnidroid.app.mobile.shared.compose.ui.accentColor
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.EnterExitState
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animate
@@ -74,6 +79,7 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -109,6 +115,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.min
 import androidx.compose.ui.unit.offset
@@ -127,6 +134,7 @@ import com.omnidroid.app.mobile.shared.compose.ui.gameCoverSharedBounds
 import com.omnidroid.app.mobile.shared.controller.LocalControllerNavigation
 import com.omnidroid.app.utils.games.GameUtils
 import com.omnidroid.app.shared.covers.backdropRequest
+import com.omnidroid.app.shared.library.GameStatsCache
 import coil.compose.AsyncImage
 import com.omnidroid.lib.library.GameSystem
 import com.omnidroid.lib.library.db.dao.GamePlayStats
@@ -289,13 +297,16 @@ internal fun ConsoleLibrary(
     val scope = rememberCoroutineScope()
     val selectedIndex by remember(state) { derivedStateOf { state.selectedIndex } }
     val selectedGame = items.gameAt(selectedIndex)
-    val pulse =
-        rememberInfiniteTransition(label = "consoleGlow").animateFloat(
-            initialValue = 0.8f,
-            targetValue = 1f,
-            animationSpec = infiniteRepeatable(tween(2400, easing = FastOutSlowInEasing), RepeatMode.Reverse),
-            label = "consoleGlowPulse",
-        )
+    // Pulse the selection glow a few times after the selection changes, then settle, instead of
+    // redrawing the glow every frame forever on an idle screen.
+    val pulseAnim = remember { Animatable(1f) }
+    LaunchedEffect(selectedIndex) {
+        repeat(GLOW_PULSES) {
+            pulseAnim.animateTo(0.8f, tween(2400, easing = FastOutSlowInEasing))
+            pulseAnim.animateTo(1f, tween(2400, easing = FastOutSlowInEasing))
+        }
+    }
+    val pulse = pulseAnim.asState()
 
     val navigation = LocalControllerNavigation.current
     var hasFocus by remember { mutableStateOf(false) }
@@ -323,6 +334,15 @@ internal fun ConsoleLibrary(
         items.gameAt(state.selectedIndex)?.let(onPlayGame)
     }
 
+    // Home: Down moves from the carousel to its Start / favourite / more buttons.
+    val actionFocus = LocalCarouselActionFocus.current
+    SideEffect { actionFocus?.controllerActive?.value = showControllerGlyph }
+    val focusActions: () -> Boolean = {
+        // Only "handled" if focus really moved, so a failed request still falls back to normal
+        // focus navigation instead of swallowing the press.
+        actionFocus != null && runCatching { actionFocus.actions.requestFocus(FocusDirection.Enter) }.getOrDefault(false)
+    }
+
     val adaptiveSpec = LocalAdaptiveLayout.current
     BoxWithConstraints(
         modifier =
@@ -331,9 +351,12 @@ internal fun ConsoleLibrary(
                 .focusRequester(focusRequester)
                 .onFocusChanged { focusState ->
                     hasFocus = focusState.isFocused
+                    actionFocus?.carouselFocused?.value = focusState.isFocused && showControllerGlyph
                     if (!focusState.isFocused) navigation?.setFocusedGame(null)
                 }
-                .onKeyEvent { event -> handleCarouselKey(event, state, scope, playSelected) }
+                // Only while the carousel itself has focus: keys its buttons (children) don't use
+                // bubble up here, and must not move the carousel or pull focus back to Start.
+                .onKeyEvent { event -> hasFocus && handleCarouselKey(event, state, scope, playSelected, focusActions) }
                 .focusable(),
     ) {
         val carouselRatio = if (maxHeight > 0.dp) maxWidth / maxHeight else 1f
@@ -394,8 +417,10 @@ private fun handleCarouselKey(
     state: ConsoleCarouselState,
     scope: CoroutineScope,
     onConfirm: () -> Unit,
+    onDown: () -> Boolean,
 ): Boolean {
     return when (event.key) {
+        Key.DirectionDown -> event.type == KeyEventType.KeyDown && onDown()
         // At either end the key is left unconsumed so focus can move on to the console rail.
         Key.DirectionLeft -> {
             if (event.type != KeyEventType.KeyDown || state.targetIndex <= 0) return false
@@ -439,17 +464,27 @@ private fun ConsoleCarouselState.settledAmount(): Float {
     return 1f - (abs(p - p.roundToInt()) * 2.5f).coerceIn(0f, 1f)
 }
 
-private class LandscapeMetrics(maxWidth: Dp, maxHeight: Dp) {
+private class LandscapeMetrics(maxWidth: Dp, maxHeight: Dp, home: Boolean = false) {
     val edge = if (maxHeight < 280.dp) 16.dp else 20.dp
     val gap = 12.dp
     val bigHeight = (maxHeight - edge * 2).coerceIn(96.dp, 440.dp)
     val bigWidth = bigHeight * LibraryGameCardAspectRatio
-    val smallHeight = bigHeight * 0.55f
+    // Home's details (title, meta line, buttons) need a little more room above the small cards.
+    // Home keeps room under the small cards for its title, meta line and buttons (about 90 dp):
+    // on short screens (small 4:3 handhelds) the small cards shrink rather than clip the title.
+    val smallHeight =
+        if (home) {
+            minOf(bigHeight * 0.48f, bigHeight - gap - HomeInfoMinHeight).coerceAtLeast(bigHeight * 0.32f)
+        } else {
+            bigHeight * 0.55f
+        }
     val smallWidth = smallHeight * LibraryGameCardAspectRatio
     val top = ((maxHeight - bigHeight) / 2).coerceAtLeast(0.dp)
-    val anchorX = edge + smallWidth + gap - (if (maxHeight < 280.dp) 16.dp else 24.dp)
+    // Home lines the selected card up with the top bar and console row (leaving room for its ring);
+    // the console view lets the previous game peek in on the left.
+    val anchorX = if (home) HomeRingSpace else edge + smallWidth + gap - (if (maxHeight < 280.dp) 16.dp else 24.dp)
     val infoX = anchorX + bigWidth + gap * 1.5f
-    val infoWidth = (maxWidth - infoX - edge).coerceAtLeast(0.dp)
+    val infoWidth = (maxWidth - infoX - (if (home) 0.dp else edge)).coerceAtLeast(0.dp)
     val infoHeight = (bigHeight - smallHeight - gap).coerceAtLeast(0.dp)
     val compactInfo = infoHeight < 110.dp
     val step = smallWidth + gap
@@ -475,7 +510,8 @@ private fun ConsoleLandscapeCarousel(
     // Glow sits outside sharedBounds, so hide it while the cover flies to/from details.
     val coverTransitioning = sharedTransitionScope.isTransitionActive
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-        val metrics = remember(maxWidth, maxHeight) { LandscapeMetrics(maxWidth, maxHeight) }
+        val home = LocalHomeCarouselStyle.current
+        val metrics = remember(maxWidth, maxHeight, home) { LandscapeMetrics(maxWidth, maxHeight, home) }
         val first = (selectedIndex - 2).coerceAtLeast(0)
         val last = (selectedIndex + metrics.visibleAfter).coerceAtMost(items.count - 1)
         val stepPx = with(LocalDensity.current) { metrics.step.toPx() }
@@ -494,13 +530,16 @@ private fun ConsoleLandscapeCarousel(
                             game = game,
                             renderWidth = metrics.bigWidth,
                             renderHeight = metrics.bigHeight,
+                            // Too narrow for a legible caption on short screens (small 4:3).
+                            caption = metrics.smallWidth >= 56.dp,
                             focus = {
                                 if (coverTransitioning) 0f else state.focusOf(index)
                             },
                             pulse = pulse,
                             sharedModifier =
                                 game?.let {
-                                    consoleCoverSharedBounds(sharedTransitionScope, animatedVisibilityScope, it, LandscapeCardCorner,
+                                    consoleCoverSharedBounds(sharedTransitionScope, animatedVisibilityScope, it,
+                                        if (LocalHomeCarouselStyle.current) HomeCardCorner else LandscapeCardCorner,
                                         if (items.isFeatured(index)) GameCoverOrigin.Continue else GameCoverOrigin.Library)
                                 } ?: Modifier,
                             onClick = { game?.let { onCardClick(index, it) } },
@@ -579,18 +618,33 @@ private fun ConsoleLandscapeCard(
     game: Game?,
     renderWidth: Dp,
     renderHeight: Dp,
+    caption: Boolean,
     focus: () -> Float,
     pulse: State<Float>,
     sharedModifier: Modifier,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
 ) {
-    val shape = RoundedCornerShape(LandscapeCardCorner)
+    val home = LocalHomeCarouselStyle.current
+    val carouselFocus = LocalCarouselActionFocus.current
+    val accent = accentColor
+    val corner = if (home) HomeCardCorner else LandscapeCardCorner
+    val shape = RoundedCornerShape(corner)
     Box(
         modifier =
             Modifier
                 .fillMaxSize()
-                .consoleSelectionGlow(LandscapeCardCorner, focus, pulse)
+                .then(
+                    if (home) {
+                        Modifier.homeSelectionRing(
+                            corner,
+                            accent,
+                            dimmed = { carouselFocus != null && carouselFocus.controllerActive.value && !carouselFocus.carouselFocused.value },
+                        ) { focus() }
+                    } else {
+                        Modifier.consoleSelectionGlow(LandscapeCardCorner, focus, pulse, accent)
+                    },
+                )
                 .then(sharedModifier)
                 .shadow(elevation = 6.dp, shape = shape)
                 .background(chromeColors.listRow)
@@ -600,16 +654,27 @@ private fun ConsoleLandscapeCard(
         if (game == null) return@Box
         OmnidroidGameImage(
             modifier = Modifier.renderAtSize(renderWidth, renderHeight),
+            // The card's banner shows the title.
+            contentDescription = null,
             game = game,
             aspectRatio = null,
+            // Decode at the selected card's size, not the 160dp default (blurry when enlarged).
+            decodeWidth = renderWidth,
         )
-        ConsoleSystemBanner(
-            game = game,
-            modifier =
-                Modifier
-                    .align(Alignment.BottomCenter)
-                    .graphicsLayer { alpha = 1f - focus() },
-        )
+        if (home) {
+            if (caption) HomeCardCaption(
+                game = game,
+                modifier = Modifier.align(Alignment.BottomCenter).graphicsLayer { alpha = 1f - focus() },
+            )
+        } else {
+            ConsoleSystemBanner(
+                game = game,
+                modifier =
+                    Modifier
+                        .align(Alignment.BottomCenter)
+                        .graphicsLayer { alpha = 1f - focus() },
+            )
+        }
     }
 }
 
@@ -678,17 +743,43 @@ private fun LandscapeInfoPanel(
     onSettings: (Game) -> Unit,
 ) {
     if (game == null) return
+    val home = LocalHomeCarouselStyle.current
     Column(modifier = modifier, verticalArrangement = Arrangement.Bottom) {
         // Weighted so a long title gives up lines instead of squeezing the action buttons.
         ConsoleRotatingTitle(
             text = game.displayName,
             style =
-                (if (compact) MaterialTheme.typography.titleLarge else MaterialTheme.typography.headlineSmall)
-                    .copy(fontWeight = FontWeight.Bold),
-            maxLines = if (compact) 1 else 2,
+                when {
+                    home -> MaterialTheme.typography.titleLarge.copy(fontSize = HomeTitleSize, lineHeight = 26.sp, fontWeight = FontWeight.Bold)
+                    compact -> MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
+                    else -> MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
+                },
+            // Home keeps the title on one line (it scrolls when long) so the details and buttons
+            // below always fit beside the card.
+            maxLines = if (compact || home) 1 else 2,
             active = true,
             modifier = Modifier.weight(1f, fill = false),
+            color = chromeColors.content,
         )
+        if (home) {
+            Text(
+                text = homeGameMeta(game),
+                style = homeTextStyle(),
+                color = chromeColors.muted,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Spacer(modifier = Modifier.height(if (compact) 8.dp else 14.dp))
+            HomeActions(
+                game = game,
+                continueGame = continueAction,
+                onPlay = onPlay,
+                onFavoriteToggle = onFavoriteToggle,
+                onMore = { onSettings(game) },
+                compact = true,
+            )
+            return@Column
+        }
         LibraryGameSubtext(game = game)
         Spacer(modifier = Modifier.height(if (compact) 6.dp else 10.dp))
         ConsoleActions(
@@ -749,6 +840,7 @@ private fun ConsolePortraitCarousel(
                         val game = items.gameAt(index)
                         ConsolePortraitCard(
                             game = game,
+                            cardWidth = metrics.cardWidth,
                             focus = {
                                 if (coverTransitioning) 0f else state.focusOf(index)
                             },
@@ -763,7 +855,16 @@ private fun ConsolePortraitCarousel(
                         )
                     }
                 }
-                if (showButtons) {
+                if (showButtons && LocalHomeCarouselStyle.current) {
+                    HomeActions(
+                        game = items.gameAt(selectedIndex),
+                        continueGame = items.isFeatured(selectedIndex),
+                        modifier = Modifier.consoleActionFade(settledAmount = { state.settledAmount() }).padding(horizontal = 4.dp),
+                        onPlay = onPlay,
+                        onFavoriteToggle = onFavoriteToggle,
+                        onMore = { items.gameAt(state.selectedIndex)?.let(onGameLongClick) },
+                    )
+                } else if (showButtons) {
                     ConsoleActions(
                         label =
                             stringResource(
@@ -827,20 +928,35 @@ private fun ConsolePortraitCarousel(
 @Composable
 private fun ConsolePortraitCard(
     game: Game?,
+    cardWidth: Dp,
     focus: () -> Float,
     pulse: State<Float>,
     sharedModifier: Modifier,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
 ) {
-    val shape = RoundedCornerShape(PortraitCardCorner)
+    val home = LocalHomeCarouselStyle.current
+    val carouselFocus = LocalCarouselActionFocus.current
+    val accent = accentColor
+    val corner = if (home) HomeCardCorner * 2 else PortraitCardCorner
+    val shape = RoundedCornerShape(corner)
     val currentFocus by rememberUpdatedState(focus)
     val centered by remember { derivedStateOf { currentFocus() > 0.95f } }
     Box(
         modifier =
             Modifier
                 .fillMaxSize()
-                .consoleSelectionGlow(PortraitCardCorner, focus, pulse)
+                .then(
+                    if (home) {
+                        Modifier.homeSelectionRing(
+                            corner,
+                            accent,
+                            dimmed = { carouselFocus != null && carouselFocus.controllerActive.value && !carouselFocus.carouselFocused.value },
+                        ) { focus() }
+                    } else {
+                        Modifier.consoleSelectionGlow(PortraitCardCorner, focus, pulse, accent)
+                    },
+                )
                 .then(sharedModifier)
                 .shadow(
                     elevation = 20.dp,
@@ -855,9 +971,40 @@ private fun ConsolePortraitCard(
         if (game != null) {
             OmnidroidGameImage(
                 modifier = Modifier.fillMaxSize(),
+                // The card's caption shows the title.
+                contentDescription = null,
                 game = game,
                 aspectRatio = null,
+                // Decode at the card's real width (from the carousel's metrics, so no extra
+                // subcomposition per card), not the 160dp default that is blurry on large cards.
+                decodeWidth = cardWidth,
             )
+            if (home) {
+                // Home's caption: console, title and the same meta line as the other views.
+                Column(
+                    modifier =
+                        Modifier
+                            .align(Alignment.BottomCenter)
+                            .fillMaxWidth()
+                            .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.9f))))
+                            .padding(start = 14.dp, end = 14.dp, top = 48.dp, bottom = 14.dp),
+                ) {
+                    ConsoleRotatingTitle(
+                        text = game.displayName,
+                        style = MaterialTheme.typography.titleMedium.copy(fontSize = 17.sp, fontWeight = FontWeight.Bold),
+                        maxLines = 1,
+                        active = centered,
+                        color = Color.White,
+                    )
+                    Text(
+                        text = homeGameMeta(game),
+                        style = homeTextStyle(),
+                        color = Color.White.copy(alpha = 0.75f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            } else {
             ConsoleSystemChip(
                 game = game,
                 modifier =
@@ -892,6 +1039,7 @@ private fun ConsolePortraitCard(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 ConsolePortraitGameStats(game = game)
+            }
             }
         }
         Box(
@@ -954,13 +1102,11 @@ internal fun ConsoleGameStats(
     horizontalArrangement: Arrangement.Horizontal = Arrangement.spacedBy(10.dp),
 ) {
     val context = LocalContext.current
-    val db = remember(context) { (context.applicationContext as? OmnidroidApplication)?.retrogradeDb }
     val playTimeStore = remember(context) { PlayTimeStore(context) }
     val initialPlayTime = remember(game.id) { playTimeStore.get(game.id) }
-    val stats by remember(game.id, db) {
-        db?.gameSessionDao()?.observeStatsForGame(game.id)
-            ?: flowOf(GamePlayStats(totalDurationMs = initialPlayTime))
-    }.collectAsState(initial = GamePlayStats(totalDurationMs = initialPlayTime))
+    // One shared query for all rows instead of a Room observer per visible row.
+    val allStats by remember(context) { GameStatsCache.observe(context) }.collectAsState()
+    val stats = allStats[game.id] ?: GamePlayStats(totalDurationMs = initialPlayTime)
 
     val totalPlayTimeMs = maxOf(stats.totalDurationMs, initialPlayTime)
     val sessionCount = maxOf(stats.sessionCount, if (totalPlayTimeMs > 0L) 1 else 0)
@@ -1120,7 +1266,7 @@ private fun Modifier.consoleActionFade(
     }.padding(ConsoleActionShadowPadding)
 
 @Composable
-private fun ConsoleActions(
+internal fun ConsoleActions(
     label: String,
     showControllerGlyph: Boolean,
     modifier: Modifier = Modifier,
@@ -1143,8 +1289,12 @@ private fun ConsoleActions(
         Spacer(modifier = Modifier.width(8.dp))
         ConsoleIconButton(
             imageVector = if (favorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-            contentDescription = stringResource(R.string.favorites),
-            tint = if (favorite) LibraryNeonGreen else chromeColors.muted,
+            // Toggle: announce what tapping does, not just "Favorites".
+            contentDescription =
+                stringResource(
+                    if (favorite) R.string.game_context_menu_remove_from_favorites else R.string.game_context_menu_add_to_favorites,
+                ),
+            tint = if (favorite) accentColor else chromeColors.muted,
             onClick = {
                 game?.let {
                     favorite = !favorite
@@ -1218,13 +1368,13 @@ private fun ConsoleStartButton(
                     modifier =
                         Modifier
                             .size(20.dp)
-                            .border(1.5.dp, Color.White, CircleShape),
+                            .border(1.5.dp, OnLibraryNeonGreen, CircleShape),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
                         text = "A",
                         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                        color = Color.White,
+                        color = OnLibraryNeonGreen,
                         textAlign = TextAlign.Center,
                     )
                 }
@@ -1233,14 +1383,14 @@ private fun ConsoleStartButton(
                     imageVector = Icons.Filled.PlayArrow,
                     contentDescription = null,
                     modifier = Modifier.size(22.dp),
-                    tint = Color.White,
+                    tint = OnLibraryNeonGreen,
                 )
             }
             Spacer(modifier = Modifier.width(6.dp))
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
-                color = Color.White,
+                color = OnLibraryNeonGreen,
                 maxLines = 1,
             )
         }
@@ -1309,6 +1459,7 @@ private fun Modifier.consoleSelectionGlow(
     corner: Dp,
     amount: () -> Float,
     pulse: State<Float>,
+    color: Color = LibraryNeonGreen,
 ): Modifier =
     drawBehind {
         val selected = amount()
@@ -1319,7 +1470,7 @@ private fun Modifier.consoleSelectionGlow(
         for (layer in GlowLayers downTo 1) {
             val grow = spread * layer / GlowLayers
             drawRoundRect(
-                color = LibraryNeonGreen.copy(alpha = GlowLayerAlpha * strength),
+                color = color.copy(alpha = GlowLayerAlpha * strength),
                 topLeft = Offset(-grow, -grow),
                 size = Size(size.width + grow * 2, size.height + grow * 2),
                 cornerRadius = CornerRadius(radius + grow),
@@ -1331,7 +1482,7 @@ private fun Modifier.consoleSelectionGlow(
         if (selected <= 0.01f) return@drawWithContent
         val stroke = 1.5.dp.toPx()
         drawRoundRect(
-            color = LibraryNeonGreen.copy(alpha = selected),
+            color = color.copy(alpha = selected),
             topLeft = Offset(stroke / 2, stroke / 2),
             size = Size(size.width - stroke, size.height - stroke),
             cornerRadius = CornerRadius(corner.toPx() - stroke / 2),
@@ -1383,3 +1534,6 @@ private fun consoleCoverSharedBounds(
     }
     return Modifier.gameCoverSharedBounds(sharedTransitionScope, animatedVisibilityScope, game.id, cornerAnim, origin)
 }
+
+/** Glow pulses after a selection change before it settles. */
+private const val GLOW_PULSES = 3

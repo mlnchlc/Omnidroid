@@ -1,5 +1,6 @@
 package com.omnidroid.app.mobile.feature.library
 
+import com.omnidroid.app.mobile.shared.compose.ui.OnLibraryNeonGreen
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.EnterExitState
 import androidx.compose.animation.ExperimentalSharedTransitionApi
@@ -42,6 +43,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.omnidroid.R
+import com.omnidroid.app.mobile.shared.compose.ui.WireframeIcons
+import androidx.compose.foundation.shape.CircleShape
 import com.omnidroid.app.mobile.shared.compose.ui.GameCardInfoStyle
 import com.omnidroid.app.mobile.shared.compose.ui.GameCoverOrigin
 import com.omnidroid.app.mobile.shared.compose.ui.LibraryGameCardAspectRatio
@@ -68,8 +71,9 @@ internal fun LibraryGameCardItem(
     decodeWidth: Dp,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
+    restingCorner: Dp = 4.dp,
 ) {
-    val cornerAnim by libraryCoverCorner(animatedVisibilityScope, game.id, 4.dp)
+    val cornerAnim by libraryCoverCorner(animatedVisibilityScope, game.id, restingCorner)
     val coverSharedModifier = Modifier.gameCoverSharedBounds(
         sharedTransitionScope, animatedVisibilityScope, game.id, cornerAnim,
         if (continueAction) GameCoverOrigin.Continue else GameCoverOrigin.Library,
@@ -121,6 +125,7 @@ internal fun LibraryGameRow(
                 .combinedClickable(
                     onClick = onClick,
                     onLongClick = onLongClick,
+                    onLongClickLabel = stringResource(R.string.game_card_options_label),
                 ),
         shape = shape,
         color = chromeColors.listRow,
@@ -146,6 +151,8 @@ internal fun LibraryGameRow(
                 game = game,
                 aspectRatio = null,
                 decodeWidth = thumbWidth,
+                // The row's title text already names the game.
+                contentDescription = null,
             )
             Column(
                 modifier =
@@ -172,29 +179,27 @@ internal fun LibraryGameRow(
             val trailingShape = RoundedCornerShape(rowCorner - coverInset)
             when {
                 continueAction -> {
+                    // Same pill as Home's Continue button: rounded, green, dark label.
                     Row(
                         modifier =
                             Modifier
-                                .height(thumbHeight)
-                                .clip(trailingShape)
+                                .height(36.dp)
+                                .clip(CircleShape)
                                 .background(LibraryNeonGreen)
-                                .padding(start = 12.dp, end = 16.dp),
+                                .padding(start = 14.dp, end = 18.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Icon(
-                            imageVector = Icons.Filled.PlayArrow,
+                            imageVector = WireframeIcons.Play,
                             contentDescription = null,
-                            modifier = Modifier.size(22.dp),
-                            tint = Color.White,
+                            modifier = Modifier.size(16.dp),
+                            tint = HomeOnAccent,
                         )
-                        Spacer(modifier = Modifier.width(6.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = stringResource(R.string.continue_playing),
-                            style =
-                                MaterialTheme.typography.labelLarge.copy(
-                                    fontWeight = FontWeight.Bold,
-                                ),
-                            color = Color.White,
+                            style = homeTextStyle(FontWeight.Bold),
+                            color = HomeOnAccent,
                             maxLines = 1,
                         )
                     }

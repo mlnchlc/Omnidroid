@@ -1,5 +1,11 @@
 package com.omnidroid.app.mobile.feature.settings.general
 
+import com.omnidroid.app.utils.android.settings.stringPreferenceState
+import com.omnidroid.app.utils.android.settings.OmnidroidSettingsColorChoice
+import com.omnidroid.app.mobile.shared.compose.ui.LocalAppDarkTheme
+import com.omnidroid.app.mobile.shared.compose.ui.AccentPreset
+import androidx.compose.material3.MaterialTheme
+import com.omnidroid.app.shared.settings.HDModeQuality
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -12,7 +18,12 @@ import com.omnidroid.app.mobile.feature.main.navigateToRoute
 import com.omnidroid.app.shared.settings.rememberHdModeAllowed
 import com.omnidroid.app.utils.android.settings.OmnidroidSettingsGroup
 import com.omnidroid.app.utils.android.settings.OmnidroidSettingsList
+import com.omnidroid.app.mobile.feature.library.HomeView
+import com.omnidroid.app.mobile.feature.library.LibraryLayout
+import com.omnidroid.app.mobile.feature.library.LibraryViewModel
 import com.omnidroid.app.utils.android.settings.OmnidroidSettingsMenuLink
+import com.omnidroid.app.utils.android.settings.OmnidroidSettingsSegmented
+import com.omnidroid.app.utils.android.settings.SettingsHorizontalDivider
 import com.omnidroid.app.utils.android.settings.OmnidroidSettingsSlider
 import com.omnidroid.app.utils.android.settings.OmnidroidSettingsSwitch
 import com.omnidroid.app.utils.android.settings.booleanPreferenceState
@@ -39,8 +50,8 @@ internal fun DisplaySettings(navController: NavController) {
         }
     }
 
-    OmnidroidSettingsGroup {
-        OmnidroidSettingsList(
+    OmnidroidSettingsGroup(titleRes = R.string.settings_section_appearance) {
+        OmnidroidSettingsSegmented(
             state =
                 indexPreferenceState(
                     R.string.pref_key_app_theme,
@@ -49,6 +60,22 @@ internal fun DisplaySettings(navController: NavController) {
                 ),
             titleRes = R.string.settings_title_app_theme,
             items = stringListResource(R.array.pref_key_app_theme_display_names),
+        )
+        val accent = stringPreferenceState(R.string.pref_key_accent_color, AccentPreset.GREEN.key)
+        val dark = LocalAppDarkTheme.current
+        val presets = AccentPreset.entries
+        OmnidroidSettingsColorChoice(
+            selectedIndex = presets.indexOf(AccentPreset.fromKey(accent.value)),
+            colors = presets.map { if (dark) it.dark else it.light },
+            labels = presets.map { stringResource(it.labelRes()) },
+            onSelect = { accent.value = presets[it].key },
+            titleRes = R.string.settings_title_accent_color,
+            subtitleRes = R.string.settings_description_accent_color,
+        )
+        OmnidroidSettingsSwitch(
+            state = immersiveMode,
+            titleRes = R.string.settings_title_immersive_mode,
+            subtitleRes = R.string.settings_description_immersive_mode,
         )
         OmnidroidSettingsMenuLink(
             titleRes = R.string.settings_title_button_ui_scale,
@@ -63,11 +90,51 @@ internal fun DisplaySettings(navController: NavController) {
             },
             onClick = { navController.navigateToRoute(MainRoute.SETTINGS_UI_SCALE) },
         )
-        OmnidroidSettingsSwitch(
-            state = immersiveMode,
-            titleRes = R.string.settings_title_immersive_mode,
-            subtitleRes = R.string.settings_description_immersive_mode,
+    }
+    SettingsHorizontalDivider()
+    val libraryLayout =
+        indexPreferenceState(
+            LibraryViewModel.LAYOUT_KEY,
+            LibraryLayout.CONSOLE.name,
+            LibraryLayout.entries.map { it.name },
         )
+    OmnidroidSettingsGroup(titleRes = R.string.settings_section_home) {
+        OmnidroidSettingsSegmented(
+            state = libraryLayout,
+            titleRes = R.string.settings_title_library_layout,
+            subtitleRes = R.string.settings_description_library_layout,
+            items =
+                LibraryLayout.entries.map {
+                    stringResource(
+                        when (it) {
+                            LibraryLayout.CONSOLE -> R.string.library_layout_console_short
+                            LibraryLayout.HOME -> R.string.library_layout_home_short
+                            LibraryLayout.GRID -> R.string.library_layout_grid_short
+                            LibraryLayout.LIST -> R.string.library_layout_list_short
+                        },
+                    )
+                },
+        )
+        OmnidroidSettingsSegmented(
+            enabled = LibraryLayout.entries.getOrNull(libraryLayout.value) == LibraryLayout.HOME,
+            state =
+                indexPreferenceState(
+                    LibraryViewModel.HOME_VIEW_KEY,
+                    HomeView.ROW.name,
+                    HomeView.entries.map { it.name },
+                ),
+            titleRes = R.string.settings_title_home_view,
+            subtitleRes = R.string.settings_description_home_view,
+            items =
+                listOf(
+                    stringResource(R.string.library_layout_row_short),
+                    stringResource(R.string.library_layout_grid_short),
+                    stringResource(R.string.library_layout_list_short),
+                ),
+        )
+    }
+    SettingsHorizontalDivider()
+    OmnidroidSettingsGroup(titleRes = R.string.settings_section_game_screen) {
         OmnidroidSettingsSwitch(
             enabled = hdModeAllowed,
             state = hdMode,
@@ -101,6 +168,19 @@ internal fun DisplaySettings(navController: NavController) {
             valueRange = 0f..2f,
             titleRes = R.string.settings_title_hd_quality,
             subtitleRes = R.string.settings_description_hd_quality,
+            valueText = { value ->
+                Text(
+                    text =
+                        stringResource(
+                            when (HDModeQuality.parse(value)) {
+                                HDModeQuality.LOW -> R.string.settings_hd_quality_low
+                                HDModeQuality.MEDIUM -> R.string.settings_hd_quality_medium
+                                HDModeQuality.HIGH -> R.string.settings_hd_quality_high
+                            },
+                        ),
+                    style = MaterialTheme.typography.titleMedium,
+                )
+            },
         )
         OmnidroidSettingsList(
             enabled = !hdMode.value,
@@ -115,3 +195,16 @@ internal fun DisplaySettings(navController: NavController) {
         )
     }
 }
+
+private fun AccentPreset.labelRes(): Int =
+    when (this) {
+        AccentPreset.GREEN -> R.string.accent_color_green
+        AccentPreset.BLUE -> R.string.accent_color_blue
+        AccentPreset.PURPLE -> R.string.accent_color_purple
+        AccentPreset.PINK -> R.string.accent_color_pink
+        AccentPreset.RED -> R.string.accent_color_red
+        AccentPreset.ORANGE -> R.string.accent_color_orange
+        AccentPreset.YELLOW -> R.string.accent_color_yellow
+        AccentPreset.TEAL -> R.string.accent_color_teal
+        AccentPreset.WHITE -> R.string.accent_color_white
+    }

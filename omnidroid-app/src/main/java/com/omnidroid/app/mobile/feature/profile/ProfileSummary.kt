@@ -1,5 +1,7 @@
 package com.omnidroid.app.mobile.feature.profile
 
+import androidx.compose.foundation.shape.RoundedCornerShape
+import com.omnidroid.app.mobile.shared.controller.controllerFocusGlow
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -71,7 +73,7 @@ internal fun ProfileIdentity(
 ) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Box(
-            Modifier.size(if (compact) 48.dp else 64.dp).clickable(
+            Modifier.size(if (compact) 48.dp else 64.dp).controllerFocusGlow(RoundedCornerShape(8.dp)).clickable(
                 role = Role.Button,
                 onClickLabel = stringResource(R.string.profile_change_picture),
                 onClick = onEditPhoto,
@@ -145,7 +147,7 @@ internal fun ProfileIdentity(
                 }
             }
         }
-        IconButton(onClick = onEditTag) {
+        IconButton(onClick = onEditTag, modifier = Modifier.controllerFocusGlow(CircleShape)) {
             Icon(
                 Icons.Outlined.Edit,
                 contentDescription = stringResource(R.string.profile_change_tag),

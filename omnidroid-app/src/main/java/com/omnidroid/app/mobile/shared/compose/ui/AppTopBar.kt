@@ -28,6 +28,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -37,6 +40,7 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -58,6 +62,9 @@ fun AppTopBar(
     leadingContent: (@Composable () -> Unit)? = null,
     trailingContent: (@Composable () -> Unit)? = null,
     bottomContent: (@Composable () -> Unit)? = null,
+    showStatus: Boolean = true,
+    /** Page title shown beside the Back button, e.g. "Settings". */
+    title: String? = null,
 ) {
     val spec = LocalAdaptiveLayout.current
     val height by animateDpAsState(
@@ -65,6 +72,14 @@ fun AppTopBar(
         animationSpec = tween(300, easing = FastOutSlowInEasing),
         label = "topBarHeight",
     )
+    // Below a punch-hole at the top in portrait; beside one in landscape, with the same start and end
+    // spacing as the content underneath so their edges line up.
+    val topInset = cutoutTopInset()
+    val edges = rememberContentEdges(contentEdge(portrait))
+    // On narrow landscape screens (small 4:3 handhelds) the read-outs would crowd search and
+    // the buttons, so they make way while the controls are up.
+    val statusFits = !controlsVisible || trailingContent == null || LocalConfiguration.current.screenWidthDp >= 700
+    val status = showStatus && statusFits
     val syncAlignment = if (portrait) Alignment.Top else Alignment.Bottom
     val syncOrigin = TransformOrigin(0.5f, if (portrait) 0f else 1f)
 
@@ -75,19 +90,19 @@ fun AppTopBar(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .height(height)
+                        .height(height + topInset)
                         .background(Brush.verticalGradient(listOf(homeChromeColor, Color.Transparent))),
             )
             Column(
                 modifier =
                     Modifier
+                        .padding(top = topInset)
                         .fillMaxWidth()
                         .height(height)
-                        .clipToBounds()
-                        .then(if (portrait) Modifier else Modifier.hugDisplayCutout(WindowInsetsSides.Horizontal)),
+                        .clipToBounds(),
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().height(spec.topBarRowHeight).padding(horizontal = 8.dp),
+                    modifier = Modifier.fillMaxWidth().height(spec.topBarRowHeight).padding(start = edges.start, end = edges.end),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Box(modifier = Modifier.weight(1f)) {
@@ -101,23 +116,41 @@ fun AppTopBar(
                             enter = fadeIn(tween(200)),
                             exit = fadeOut(tween(200)),
                         ) {
-                            FloatingChromeButton(onClick = { onBackPressed?.invoke() }) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                    contentDescription = stringResource(R.string.back),
-                                    modifier = Modifier.size(18.dp * spec.uiScale),
-                                )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                FloatingChromeButton(onClick = { onBackPressed?.invoke() }) {
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                        contentDescription = stringResource(R.string.back),
+                                        modifier = Modifier.size(18.dp * spec.uiScale),
+                                    )
+                                }
+                                if (title != null) {
+                                    Text(
+                                        text = title,
+                                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                                        color = chromeContentColor,
+                                        maxLines = 1,
+                                        modifier = Modifier.padding(start = 12.dp),
+                                    )
+                                }
                             }
                         }
                     }
-                    SystemStatusIndicators(gamepadConnected = gamepadConnected)
+                    if (status) SystemStatusIndicators(gamepadConnected = gamepadConnected)
                     AnimatedVisibility(
                         visible = controlsVisible && trailingContent != null,
                         enter = fadeIn(tween(200)) + expandHorizontally(tween(300, easing = FastOutSlowInEasing), expandFrom = Alignment.End),
                         exit = fadeOut(tween(200)) + shrinkHorizontally(tween(300, easing = FastOutSlowInEasing), shrinkTowards = Alignment.End),
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Spacer(modifier = Modifier.width(10.dp))
+                            if (status) {
+                                // Separates the status read-outs from the buttons.
+                                Spacer(modifier = Modifier.width(chromeItemGap()))
+                                Box(Modifier.width(1.dp).height(chromeButtonSize() * 0.55f).background(chromeColors.divider))
+                                Spacer(modifier = Modifier.width(chromeItemGap()))
+                            } else {
+                                Spacer(modifier = Modifier.width(6.dp))
+                            }
                             trailingContent?.invoke()
                         }
                     }
@@ -130,7 +163,7 @@ fun AppTopBar(
                     Column {
                         Spacer(modifier = Modifier.height(2.dp))
                         Box(
-                            modifier = Modifier.fillMaxWidth().height(spec.topBarRowHeight).padding(horizontal = 8.dp),
+                            modifier = Modifier.fillMaxWidth().height(spec.topBarRowHeight).padding(start = edges.start, end = edges.end),
                             contentAlignment = Alignment.Center,
                         ) { bottomContent?.invoke() }
                     }
@@ -150,7 +183,7 @@ fun AppTopBar(
                 modifier =
                     Modifier
                         .align(if (portrait) Alignment.TopCenter else Alignment.BottomCenter)
-                        .padding(top = if (portrait) height else 0.dp, bottom = if (portrait) 0.dp else bottomPadding)
+                        .padding(top = if (portrait) height + topInset else 0.dp, bottom = if (portrait) 0.dp else bottomPadding)
                         .fillMaxWidth(0.5f),
             ) {
                 SyncProgressNotch(

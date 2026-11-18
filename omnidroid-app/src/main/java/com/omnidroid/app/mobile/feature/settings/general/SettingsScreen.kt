@@ -1,5 +1,10 @@
 package com.omnidroid.app.mobile.feature.settings.general
 
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.unit.dp
+import com.omnidroid.app.utils.android.settings.LocalSettingsGroupsAsCards
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Box
@@ -26,7 +31,8 @@ import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.navigation.NavController
 import com.omnidroid.app.mobile.shared.compose.ui.homeChromeBackground
-import com.omnidroid.app.mobile.shared.compose.ui.hugDisplayCutout
+import com.omnidroid.app.mobile.shared.compose.ui.contentEdge
+import com.omnidroid.app.mobile.shared.compose.ui.rememberContentEdges
 import com.omnidroid.app.mobile.shared.controller.LocalControllerNavigation
 import com.omnidroid.lib.library.MetaSystemID
 import kotlinx.coroutines.yield
@@ -104,6 +110,7 @@ fun SettingsScreen(
     }
 
     val content: @Composable (Modifier) -> Unit = { paneModifier ->
+        CompositionLocalProvider(LocalSettingsGroupsAsCards provides true) {
         SettingsContentPane(
             section = section,
             activeSubscreen = activeSubscreen,
@@ -125,6 +132,7 @@ fun SettingsScreen(
             availableConsoles = availableConsoles,
             modifier = paneModifier,
         )
+        }
     }
 
     BoxWithConstraints(
@@ -134,13 +142,16 @@ fun SettingsScreen(
                 .homeChromeBackground(),
     ) {
         val isLandscape = maxWidth > maxHeight
+        val edges = rememberContentEdges(contentEdge(portrait = !isLandscape))
 
         if (isLandscape) {
             Row(
                 modifier =
                     Modifier
                         .fillMaxSize()
-                        .hugDisplayCutout(WindowInsetsSides.Horizontal),
+                        // The rail lines up with the top bar's Back button; the content cards, which
+                        // carry their own 16 dp inset, end where the top bar's status ends.
+                        .padding(start = edges.start, end = (edges.end - 16.dp).coerceAtLeast(0.dp)),
             ) {
                 SettingsSidebar(
                     modifier =
@@ -178,6 +189,7 @@ fun SettingsScreen(
         } else {
             Column(modifier = Modifier.fillMaxSize()) {
                 SettingsTopMenu(
+                    edgePadding = edges.start,
                     modifier =
                         Modifier
                             .focusGroup()

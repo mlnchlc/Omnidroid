@@ -1,5 +1,6 @@
 package com.omnidroid.app.mobile.feature.library
 
+import com.omnidroid.app.mobile.shared.compose.ui.libraryAccentColor
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
@@ -109,7 +110,11 @@ import com.omnidroid.R
 import com.omnidroid.app.mobile.shared.compose.ui.AppTopBar
 import com.omnidroid.app.mobile.shared.compose.ui.FloatingChromeButton
 import com.omnidroid.app.mobile.shared.compose.ui.chromeButtonSize
-import com.omnidroid.app.mobile.shared.compose.ui.LibraryNeonGreen
+import com.omnidroid.app.mobile.shared.compose.ui.chromeIconSize
+import com.omnidroid.app.mobile.shared.compose.ui.chromeItemGap
+import com.omnidroid.app.mobile.shared.compose.ui.chromeTextStyle
+import com.omnidroid.app.mobile.shared.compose.ui.WireframeIcons
+import com.omnidroid.app.mobile.shared.compose.ui.accentColor
 import com.omnidroid.app.mobile.shared.compose.ui.LocalAdaptiveLayout
 import com.omnidroid.app.mobile.shared.compose.ui.chromeColors
 import com.omnidroid.app.mobile.shared.controller.LocalControllerNavigation
@@ -139,8 +144,16 @@ fun LibraryTopBar(
     portrait: Boolean = false,
     showLibraryControls: Boolean = true,
     onBackPressed: (() -> Unit)? = null,
+    /**
+     * Shown right after search (Home's view switch). Gets the width left beside the narrowest
+     * usable search box, so it can pick a smaller form; 0 in portrait, where there is none.
+     */
+    afterSearch: (@Composable (room: Dp) -> Unit)? = null,
+    /** Title beside Back on pages other than the library. */
+    pageTitle: String? = null,
 ) {
     val spec = LocalAdaptiveLayout.current
+    val chromeIconSize = chromeIconSize()
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
     val controllerNav = LocalControllerNavigation.current
@@ -197,28 +210,21 @@ fun LibraryTopBar(
             onActivate = { controllerNav?.searchArmed?.value = true },
             focusRequester = controllerNav?.searchFocusRequester,
             canFocus = !gamepadConnected || searchArmed,
-            trailing = { LibrarySortButton(sort = sort, menu = sortMenu) },
+            // Portrait has little room beside the buttons: sort appears once search is open.
+            trailing = if (portrait && !searchExpanded) null else ({ LibrarySortButton(sort = sort, menu = sortMenu) }),
             modifier = searchModifier,
         )
     }
     val actions: @Composable () -> Unit = {
-        val iconSize = (if (portrait) 16.dp else 18.dp) * spec.uiScale
         Row(verticalAlignment = Alignment.CenterVertically) {
-            if (portrait) {
-                ProfileChromeButton(onClick = onProfilePressed, iconSize = iconSize)
-                Spacer(modifier = Modifier.width(6.dp))
-            }
             LibraryUtilityButtons(
+                portrait = portrait,
                 hasSecondaryOutput = hasSecondaryOutput,
-                iconSize = iconSize,
+                iconSize = chromeIconSize,
                 onRandomPressed = onRandomPressed,
                 onDisplaysPressed = onDisplaysPressed,
                 onSettingsPressed = onSettingsPressed,
             )
-            if (!portrait) {
-                Spacer(modifier = Modifier.width(8.dp))
-                ProfileChromeButton(onClick = onProfilePressed, iconSize = iconSize)
-            }
         }
     }
 
@@ -238,24 +244,43 @@ fun LibraryTopBar(
             syncProgress = syncProgress,
             onBackPressed = onBackPressed,
             controlsVisible = showLibraryControls,
+            // Status (Wi-Fi, battery, time) has no room beside search and the buttons in portrait.
+            showStatus = !(portrait && showLibraryControls),
+            title = pageTitle,
             leadingContent = {
                 if (portrait) {
-                    actions()
+                    // One row, as in landscape: logo, search, then the round buttons.
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        ProfileChromeButton(onClick = onProfilePressed, iconSize = chromeIconSize)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        searchField(Modifier.weight(1f))
+                        if (afterSearch != null && !searchExpanded) {
+                            Spacer(modifier = Modifier.width(6.dp))
+                            afterSearch(0.dp)
+                        }
+                    }
                 } else {
-                    LibrarySearchRow(
-                        expanded = searchExpanded,
-                        consoleTitleId = consoleTitleId,
-                        consoleGameCount = consoleGameCount,
-                        searchField = searchField,
-                    )
+                    // The logo leads the bar, as on console home screens, and opens Profile.
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        ProfileChromeButton(onClick = onProfilePressed, iconSize = chromeIconSize)
+                        LibrarySearchRow(
+                            expanded = searchExpanded,
+                            consoleTitleId = consoleTitleId,
+                            consoleGameCount = consoleGameCount,
+                            searchField = searchField,
+                            afterSearch = afterSearch,
+                        )
+                    }
                 }
             },
-            trailingContent = if (portrait) null else actions,
-            bottomContent = if (portrait) ({ searchField(Modifier.fillMaxWidth()) }) else null,
+            trailingContent = actions,
         )
         LibrarySortMenu(menu = sortMenu, sort = sort, onSortChange = onSortChange)
     }
 }
+
+/** Narrowest landscape search box that still shows its icon, a few letters and the sort button. */
+private val MinSearchWidth = 132.dp
 
 @Composable
 private fun LibrarySearchRow(
@@ -263,6 +288,7 @@ private fun LibrarySearchRow(
     consoleTitleId: Int?,
     consoleGameCount: Int?,
     searchField: @Composable (Modifier) -> Unit,
+    afterSearch: (@Composable (room: Dp) -> Unit)? = null,
 ) {
     val spec = LocalAdaptiveLayout.current
     // Keep the last label available while its exit animation finishes.
@@ -272,17 +298,24 @@ private fun LibrarySearchRow(
         displayedTitleId = consoleTitleId
         displayedGameCount = consoleGameCount
     }
-    val startPadding = ((spec.sidebarWidth - spec.sidebarButtonSize) / 2 - 8.dp).coerceAtLeast(0.dp)
+    val startPadding = 10.dp
     BoxWithConstraints(modifier = Modifier.fillMaxWidth().padding(start = startPadding, end = 10.dp)) {
         val searchWidth by animateDpAsState(
             targetValue = if (expanded) maxWidth else spec.searchWidth.coerceAtMost(maxWidth),
             animationSpec = tween(240, easing = FastOutSlowInEasing),
             label = "librarySearchWidth",
         )
+        val roomAfterSearch = (maxWidth - MinSearchWidth - 10.dp).coerceAtLeast(0.dp)
         Row(modifier = Modifier.fillMaxWidth().clipToBounds(), verticalAlignment = Alignment.CenterVertically) {
-            searchField(Modifier.width(searchWidth))
+            // With something after it, search gives up width first so that stays whole on narrow
+            // (4:3) screens.
+            searchField(if (afterSearch != null) Modifier.weight(1f, fill = false).width(searchWidth) else Modifier.width(searchWidth))
+            if (afterSearch != null && !expanded) {
+                Spacer(modifier = Modifier.width(10.dp))
+                afterSearch(roomAfterSearch)
+            }
             AnimatedVisibility(
-                visible = !expanded && consoleTitleId != null,
+                visible = !expanded && consoleTitleId != null && afterSearch == null,
                 enter = fadeIn(tween(180)) + expandHorizontally(expandFrom = Alignment.Start),
                 exit = fadeOut(tween(180)) + shrinkHorizontally(shrinkTowards = Alignment.Start),
             ) {
@@ -302,9 +335,10 @@ private fun LibrarySearchRow(
     }
 }
 
-/** Settings, displays and play-random: borderless utility actions, unlike the dock's console circles. */
+/** Play random, displays and settings, as round chrome buttons. */
 @Composable
 private fun LibraryUtilityButtons(
+    portrait: Boolean,
     hasSecondaryOutput: Boolean,
     iconSize: Dp,
     onRandomPressed: () -> Unit,
@@ -313,27 +347,28 @@ private fun LibraryUtilityButtons(
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        // Tighter in portrait, where search shares the row with four buttons.
+        horizontalArrangement = Arrangement.spacedBy(if (portrait) 6.dp else chromeItemGap()),
     ) {
-        FloatingChromeButton(onClick = onSettingsPressed) {
+        FloatingChromeButton(onClick = onRandomPressed) {
             Icon(
-                Icons.Outlined.Settings,
-                contentDescription = stringResource(R.string.settings),
+                imageVector = WireframeIcons.Dice,
+                contentDescription = stringResource(R.string.library_play_random),
                 modifier = Modifier.size(iconSize),
             )
         }
         FloatingChromeButton(onClick = onDisplaysPressed) {
             Icon(
-                imageVector = if (hasSecondaryOutput) Icons.Filled.CastConnected else Icons.Filled.Cast,
+                imageVector = WireframeIcons.Cast,
                 contentDescription = stringResource(R.string.displays_title),
-                tint = if (hasSecondaryOutput) LibraryNeonGreen else LocalContentColor.current,
+                tint = if (hasSecondaryOutput) libraryAccentColor else LocalContentColor.current,
                 modifier = Modifier.size(iconSize),
             )
         }
-        FloatingChromeButton(onClick = onRandomPressed) {
+        FloatingChromeButton(onClick = onSettingsPressed) {
             Icon(
-                imageVector = Icons.Outlined.Casino,
-                contentDescription = stringResource(R.string.library_play_random),
+                WireframeIcons.Settings,
+                contentDescription = stringResource(R.string.settings),
                 modifier = Modifier.size(iconSize),
             )
         }
@@ -372,8 +407,9 @@ private fun ProfileChromeButton(
         Icon(
             painter = painterResource(R.drawable.ic_profile_robot),
             contentDescription = stringResource(R.string.title_profile),
-            tint = LibraryNeonGreen,
-            modifier = Modifier.size(iconSize + 2.dp * LocalAdaptiveLayout.current.uiScale),
+            tint = accentColor,
+            // The logo fills most of its button, as in the wireframes.
+            modifier = Modifier.size(chromeButtonSize() * 0.72f),
         )
     }
 }
@@ -403,8 +439,8 @@ private fun LibrarySortButton(
         Icon(
             imageVector = Icons.AutoMirrored.Filled.Sort,
             contentDescription = stringResource(R.string.library_sort),
-            tint = if (sort != LibrarySort.TITLE) LibraryNeonGreen else chromeColors.muted,
-            modifier = Modifier.size(16.dp * scale),
+            tint = if (sort != LibrarySort.TITLE) accentColor else chromeColors.muted,
+            modifier = Modifier.size(chromeIconSize()),
         )
     }
 }
@@ -507,14 +543,14 @@ private fun LibrarySortMenuItem(
         text = {
             Text(
                 text = stringResource(option.labelRes()),
-                color = if (selected) LibraryNeonGreen else chromeColors.content,
+                color = if (selected) libraryAccentColor else chromeColors.content,
             )
         },
         leadingIcon = {
             Icon(
                 imageVector = option.icon(),
                 contentDescription = null,
-                tint = if (selected) LibraryNeonGreen else chromeColors.muted,
+                tint = if (selected) libraryAccentColor else chromeColors.muted,
                 modifier = Modifier.size(18.dp),
             )
         },
@@ -523,7 +559,7 @@ private fun LibrarySortMenuItem(
                 Icon(
                     imageVector = Icons.Filled.Check,
                     contentDescription = null,
-                    tint = LibraryNeonGreen,
+                    tint = libraryAccentColor,
                     modifier = Modifier.size(18.dp),
                 )
             }
@@ -585,7 +621,7 @@ internal fun LibrarySearchField(
         tonalElevation = 0.dp,
         border =
             if (active) {
-                BorderStroke(1.5.dp, LibraryNeonGreen)
+                BorderStroke(1.5.dp, libraryAccentColor)
             } else {
                 BorderStroke(1.dp, chromeColors.panelBorder)
             },
@@ -599,9 +635,9 @@ internal fun LibrarySearchField(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
-                imageVector = Icons.Filled.Search,
+                imageVector = WireframeIcons.Search,
                 contentDescription = stringResource(R.string.title_search),
-                modifier = Modifier.size(16.dp * scale),
+                modifier = Modifier.size(chromeIconSize()),
                 tint = chromeColors.muted,
             )
             BasicTextField(
@@ -626,11 +662,7 @@ internal fun LibrarySearchField(
                         },
                 singleLine = true,
                 cursorBrush = SolidColor(chromeColors.content),
-                textStyle =
-                    TextStyle(
-                        color = chromeColors.content,
-                        fontSize = (13 * scale).sp,
-                    ),
+                textStyle = chromeTextStyle().copy(color = chromeColors.content),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
                 decorationBox = { inner ->
@@ -639,7 +671,7 @@ internal fun LibrarySearchField(
                             Text(
                                 text = stringResource(R.string.title_search),
                                 color = chromeColors.faint,
-                                fontSize = (13 * scale).sp,
+                                style = chromeTextStyle(),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                             )

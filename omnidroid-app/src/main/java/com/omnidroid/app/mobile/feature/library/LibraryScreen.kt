@@ -1,5 +1,9 @@
 package com.omnidroid.app.mobile.feature.library
 
+import com.omnidroid.app.mobile.shared.compose.ui.libraryAccentColor
+import com.omnidroid.app.mobile.shared.compose.ui.accentColor
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.focus.FocusDirection
 import android.content.Context
 import androidx.activity.compose.ReportDrawnWhen
 import androidx.compose.animation.AnimatedVisibilityScope
@@ -16,6 +20,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.focusable
@@ -32,7 +37,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -54,7 +61,10 @@ import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.automirrored.outlined.ViewList
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.ViewCarousel
+import androidx.compose.material.icons.outlined.ViewSidebar
+import androidx.compose.material.icons.outlined.ViewWeek
 import androidx.compose.material.icons.outlined.ZoomIn
 import androidx.compose.material.icons.outlined.ZoomOut
 import androidx.compose.material3.CircularProgressIndicator
@@ -82,6 +92,9 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -97,6 +110,10 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
+import com.omnidroid.app.utils.android.settings.booleanPreferenceState
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -111,11 +128,16 @@ import com.omnidroid.R
 import com.omnidroid.app.shared.settings.StorageFrameworkPickerLauncher
 import com.omnidroid.app.utils.android.benchmarkTag
 import com.omnidroid.app.mobile.shared.compose.ui.homeChromeBackground
+import com.omnidroid.app.mobile.shared.compose.ui.isTelevision
+import com.omnidroid.app.mobile.shared.compose.ui.TvSafeMargin
 import com.omnidroid.app.mobile.shared.compose.ui.OmnidroidEmptyView
-import com.omnidroid.app.mobile.shared.compose.ui.LibraryNeonGreen
 import com.omnidroid.app.mobile.shared.compose.ui.LocalAdaptiveLayout
 import com.omnidroid.app.mobile.shared.compose.ui.chromeColors
 import com.omnidroid.app.mobile.shared.compose.ui.hugDisplayCutout
+import com.omnidroid.app.mobile.shared.compose.ui.WireframeIcons
+import com.omnidroid.app.mobile.shared.compose.ui.contentEdge
+import com.omnidroid.app.mobile.shared.compose.ui.rememberContentEdges
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -125,6 +147,7 @@ import com.omnidroid.app.mobile.shared.controller.LocalControllerNavigation
 import com.omnidroid.app.mobile.shared.controller.controllerFocusGlow
 import com.omnidroid.lib.library.GameSystem
 import com.omnidroid.lib.library.MetaSystemID
+import com.omnidroid.lib.preferences.SharedPreferencesHelper
 import com.omnidroid.lib.library.db.entity.Game
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
@@ -228,7 +251,10 @@ fun LibraryScreen(
                 .homeChromeBackground(),
     ) {
         val portrait = maxHeight > maxWidth
-        if (state.layout == LibraryLayout.CONSOLE) {
+        val home = state.layout == LibraryLayout.HOME
+        // Home follows the Dynamic background setting, which also colours the game screen and menu.
+        val dynamicBackground = booleanPreferenceState(R.string.pref_key_enable_immersive_mode, false).value
+        if (state.layout == LibraryLayout.CONSOLE || (home && dynamicBackground)) {
             ConsoleBackdrop(
                 game = backdropGame,
                 modifier =
@@ -237,10 +263,70 @@ fun LibraryScreen(
                         .bleedTop(backdropTopBleed),
             )
         }
-        if (portrait) {
+        // Upside-down portrait puts a punch-hole at the bottom, under the console row.
+        val cutoutBottom =
+            with(LocalDensity.current) { WindowInsets.displayCutout.getBottom(this).toDp() }
+                .let { if (isTelevision()) maxOf(it, TvSafeMargin.vertical) else it }
+        if (home) {
+            val edges = homeEdgePadding(portrait)
+            // The carousel's Start button: Up from the dock goes there before the carousel.
+            val homeActionsRequester = remember { FocusRequester() }
             Column(
                 modifier =
                     Modifier
+                        .padding(bottom = cutoutBottom)
+                        .then(
+                            if (portrait && portraitColumnWidth != Dp.Unspecified) {
+                                Modifier.width(portraitColumnWidth)
+                            } else {
+                                Modifier.fillMaxWidth()
+                            },
+                        )
+                        .fillMaxHeight()
+                        .align(Alignment.TopCenter),
+            ) {
+                LibraryGames(
+                    modifier = Modifier.weight(1f),
+                    sharedTransitionScope = sharedTransitionScope,
+                    animatedVisibilityScope = animatedVisibilityScope,
+                    state = state,
+                    games = games,
+                    onGameClick = onGameClick,
+                    onOpenContinueGame = onOpenContinueGame,
+                    onContinueClick = onContinueClick,
+                    onGameLongClick = onGameLongClick,
+                    onFavoriteToggle = onFavoriteToggle,
+                    onSync = { viewModel.syncLibrary(it) },
+                    onClearSearch = { viewModel.clearSearchQuery() },
+                    onZoomDensityChange = { viewModel.setZoomDensity(it) },
+                    onLayoutChange = { viewModel.setLayout(it) },
+                    onBackdropGameChange = { backdropGame = it },
+                    consoleSelection = consoleSelection,
+                    pagedScrollState = pagedScrollState,
+                    requestInitialFocus = controllerConnected,
+                    showZoomBar = false,
+                    portrait = portrait,
+                    showViewBar = false,
+                    homeEdges = edges,
+                    homeActionsRequester = homeActionsRequester,
+                )
+                HomeConsoleRow(
+                    filter = state.filter,
+                    systems = state.sidebarSystems,
+                    selectedGameCount = state.selectedSystemGameCount,
+                    startupFilter = state.startupFilter,
+                    portrait = portrait,
+                    edges = edges,
+                    onFilterSelected = { viewModel.selectFilter(it) },
+                    onConsoleLongClick = { startupTarget = it },
+                    onAddConsole = onAddConsole,
+                )
+            }
+        } else if (portrait) {
+            Column(
+                modifier =
+                    Modifier
+                        .padding(bottom = cutoutBottom)
                         .then(
                             if (portraitColumnWidth != Dp.Unspecified) {
                                 Modifier.width(portraitColumnWidth)
@@ -263,6 +349,7 @@ fun LibraryScreen(
                     onGameLongClick = onGameLongClick,
                     onFavoriteToggle = onFavoriteToggle,
                     onSync = { viewModel.syncLibrary(it) },
+                    onClearSearch = { viewModel.clearSearchQuery() },
                     onZoomDensityChange = { viewModel.setZoomDensity(it) },
                     onLayoutChange = { viewModel.setLayout(it) },
                     onBackdropGameChange = { backdropGame = it },
@@ -313,6 +400,7 @@ fun LibraryScreen(
                     onGameLongClick = onGameLongClick,
                     onFavoriteToggle = onFavoriteToggle,
                     onSync = { viewModel.syncLibrary(it) },
+                    onClearSearch = { viewModel.clearSearchQuery() },
                     onZoomDensityChange = { viewModel.setZoomDensity(it) },
                     onLayoutChange = { viewModel.setLayout(it) },
                     onBackdropGameChange = { backdropGame = it },
@@ -451,7 +539,7 @@ private fun Modifier.dockEdgeFade(
         }
 
 @Composable
-private fun SidebarIconButton(
+internal fun SidebarIconButton(
     selected: Boolean,
     icon: ImageVector,
     contentDescription: String,
@@ -460,6 +548,8 @@ private fun SidebarIconButton(
 ) {
     val adaptiveSpec = LocalAdaptiveLayout.current
     Surface(
+        // The selectable Surface tells screen readers which console or filter is showing.
+        selected = selected,
         onClick = onClick,
         modifier = Modifier.size(adaptiveSpec.sidebarButtonSize).controllerFocusGlow(CircleShape),
         shape = CircleShape,
@@ -467,7 +557,7 @@ private fun SidebarIconButton(
         tonalElevation = 0.dp,
         border =
             if (selected) {
-                BorderStroke(2.dp, LibraryNeonGreen)
+                BorderStroke(2.dp, accentColor)
             } else {
                 BorderStroke(1.dp, chromeColors.panelBorder)
             },
@@ -477,7 +567,7 @@ private fun SidebarIconButton(
                 imageVector = icon,
                 contentDescription = contentDescription,
                 modifier = Modifier.size(adaptiveSpec.sidebarIconSize),
-                tint = if (selected) LibraryNeonGreen else chromeColors.muted,
+                tint = if (selected) accentColor else chromeColors.muted,
             )
             StartupBadge(visible = pinned)
         }
@@ -492,7 +582,7 @@ private fun BoxScope.StartupBadge(visible: Boolean) {
         imageVector = Icons.Filled.Star,
         contentDescription = null,
         modifier = Modifier.align(Alignment.TopEnd).size(14.dp * scale).padding(1.dp),
-        tint = LibraryNeonGreen,
+        tint = accentColor,
     )
 }
 
@@ -502,7 +592,7 @@ private fun BoxScope.StartupBadge(visible: Boolean) {
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun SidebarSystemLogoButton(
+internal fun SidebarSystemLogoButton(
     meta: MetaSystemID,
     selected: Boolean,
     onClick: () -> Unit,
@@ -564,6 +654,155 @@ private fun SidebarSystemLogoButton(
     }
 }
 
+/**
+ * Home's console row: Favorites, All and each console as round buttons with the selected
+ * filter's name beside them, centred in landscape. In portrait the name sits above the row.
+ */
+@Composable
+private fun HomeConsoleRow(
+    filter: LibraryFilter,
+    systems: List<MetaSystemID>,
+    selectedGameCount: Int?,
+    startupFilter: LibraryFilter,
+    portrait: Boolean,
+    edges: HomeEdges,
+    onFilterSelected: (LibraryFilter) -> Unit,
+    onConsoleLongClick: (MetaSystemID) -> Unit,
+    onAddConsole: () -> Unit,
+) {
+    // Console buttons as in the wireframes: 36 dp in landscape, 44 dp in portrait.
+    val baseSpec = LocalAdaptiveLayout.current
+    val buttonSize = (if (portrait) 44.dp else 36.dp) * baseSpec.uiScale
+    val adaptiveSpec =
+        baseSpec.copy(sidebarButtonSize = buttonSize, sidebarIconSize = buttonSize * 0.45f)
+    val listState = rememberLazyListState()
+    val label =
+        when (filter) {
+            is LibraryFilter.Favorites -> stringResource(R.string.favorites)
+            is LibraryFilter.System -> {
+                val title = stringResource(GameSystem.findById(filter.metaSystemID.systemIDs.first().dbname).shortTitleResId)
+                if (selectedGameCount != null) "$title · $selectedGameCount" else title
+            }
+            else -> stringResource(R.string.home_all_games)
+        }
+    val selectedSystemIndex = (filter as? LibraryFilter.System)?.let { systems.indexOf(it.metaSystemID) } ?: -1
+    // The list starts with Favorites, All and the divider.
+    val selectedItem =
+        when (filter) {
+            is LibraryFilter.Favorites -> 0
+            is LibraryFilter.System -> if (selectedSystemIndex >= 0) selectedSystemIndex + 3 else -1
+            else -> 1
+        }
+    val itemPx = with(LocalDensity.current) { buttonSize.roundToPx() }
+    LaunchedEffect(selectedItem, systems.size) {
+        // Keep the console that is showing in the middle of the dock (Favorites and All too).
+        if (selectedItem < 0) return@LaunchedEffect
+        val viewport = listState.layoutInfo.viewportSize.width
+        runCatching { listState.animateScrollToItem(selectedItem, -((viewport - itemPx) / 2).coerceAtLeast(0)) }
+    }
+    val labelText: @Composable (Modifier) -> Unit = { modifier ->
+        Text(
+            text = label,
+            style = homeTextStyle(FontWeight.SemiBold),
+            color = chromeColors.content,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = if (portrait) TextAlign.Start else TextAlign.End,
+            modifier = modifier,
+        )
+    }
+    val row: @Composable (Modifier) -> Unit = { modifier ->
+        LazyRow(
+            state = listState,
+            modifier =
+                modifier
+                    // No controller focus here: L1/R1 switch console (one highlight, the selected
+                    // one). Touch still works.
+                    .focusProperties { onEnter = { cancelFocusChange() } }
+                    .dockEdgeFade(
+                        horizontal = true,
+                        fadeStart = { listState.canScrollBackward },
+                        fadeEnd = { listState.canScrollForward },
+                    ),
+            horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            item(key = "favorites") {
+                Box {
+                SidebarIconButton(
+                    selected = filter is LibraryFilter.Favorites,
+                    icon = if (filter is LibraryFilter.Favorites) WireframeIcons.HeartFilled else WireframeIcons.Heart,
+                    contentDescription = stringResource(R.string.favorites),
+                    onClick = { onFilterSelected(LibraryFilter.Favorites) },
+                    pinned = startupFilter is LibraryFilter.Favorites,
+                )
+                }
+            }
+            item(key = "all") {
+                Box {
+                SidebarIconButton(
+                    selected = filter is LibraryFilter.All,
+                    icon = WireframeIcons.AllGames,
+                    contentDescription = stringResource(R.string.show_all),
+                    onClick = { onFilterSelected(LibraryFilter.All) },
+                )
+                }
+            }
+            item(key = "divider") {
+                Box(Modifier.width(1.dp).height(28.dp * adaptiveSpec.uiScale).background(chromeColors.divider))
+            }
+            items(systems, key = { it.name }) { system ->
+                Box {
+                SidebarSystemLogoButton(
+                    meta = system,
+                    selected = (filter as? LibraryFilter.System)?.metaSystemID == system,
+                    pinned = startupFilter == LibraryFilter.System(system),
+                    onClick = { onFilterSelected(LibraryFilter.System(system)) },
+                    onLongClick = { onConsoleLongClick(system) },
+                )
+                }
+            }
+            item(key = "add_console") {
+                SidebarIconButton(
+                    selected = false,
+                    icon = Icons.Filled.Add,
+                    contentDescription = stringResource(R.string.title_add_console),
+                    onClick = onAddConsole,
+                )
+            }
+        }
+    }
+    CompositionLocalProvider(LocalAdaptiveLayout provides adaptiveSpec) {
+    if (portrait) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(start = edges.start, end = edges.end, bottom = 12.dp).focusGroup(),
+        ) {
+            labelText(Modifier.padding(bottom = 8.dp))
+            row(Modifier.fillMaxWidth())
+        }
+    } else {
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(adaptiveSpec.consoleBarHeight)
+                    .padding(start = edges.start, end = edges.end)
+                    .focusGroup(),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            // The label gets a fixed slot, so the console buttons don't shift as it changes
+            // ("All games", "N64 · 12", ...).
+            row(Modifier.weight(1f))
+            labelText(Modifier.padding(start = 16.dp).width(DockLabelWidth * adaptiveSpec.uiScale))
+        }
+    }
+    }
+}
+
+/** Landscape Home dock: room for the longest usual label, e.g. "Favourites" or "PSP · 1234". */
+private val DockLabelWidth = 112.dp
+
 @Composable
 internal fun PortraitConsoleBar(
     filter: LibraryFilter,
@@ -573,6 +812,9 @@ internal fun PortraitConsoleBar(
     onFilterSelected: (LibraryFilter) -> Unit,
     onConsoleLongClick: (MetaSystemID) -> Unit,
     onAddConsole: () -> Unit,
+    startPadding: Dp? = null,
+    endPadding: Dp? = null,
+    trailing: (@Composable () -> Unit)? = null,
 ) {
     val adaptiveSpec = LocalAdaptiveLayout.current
     val listState = rememberLazyListState()
@@ -589,12 +831,13 @@ internal fun PortraitConsoleBar(
             if (overflow > 0) runCatching { listState.animateScrollBy(overflow.toFloat()) }
         }
     }
+    val defaultPadding = if (adaptiveSpec.isCompact) 8.dp else 12.dp
     Row(
         modifier =
             Modifier
                 .fillMaxWidth()
                 .height(adaptiveSpec.consoleBarHeight)
-                .padding(horizontal = if (adaptiveSpec.isCompact) 8.dp else 12.dp)
+                .padding(start = startPadding ?: defaultPadding, end = endPadding ?: defaultPadding)
                 .focusGroup(),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -659,7 +902,23 @@ internal fun PortraitConsoleBar(
                 )
             }
         }
+        trailing?.invoke()
     }
+}
+
+/** Start and end spacing for Home content. */
+internal data class HomeEdges(val start: Dp, val end: Dp)
+
+/**
+ * Home content starts after the display cutout on whichever side it is, plus [CutoutGap].
+ * Phones without a cutout, and TVs, report no inset and keep the normal edge spacing. Only the
+ * content moves; the background still runs edge to edge.
+ */
+@Composable
+internal fun homeEdgePadding(portrait: Boolean): HomeEdges {
+    // Shared with the top bar, so the logo, the first card and the first console line up.
+    val edges = rememberContentEdges(contentEdge(portrait))
+    return HomeEdges(start = edges.start, end = edges.end)
 }
 
 @OptIn(ExperimentalSharedTransitionApi::class)
@@ -676,6 +935,7 @@ private fun LibraryGames(
     onGameLongClick: (Game) -> Unit,
     onFavoriteToggle: (Game, Boolean) -> Unit,
     onSync: (Context) -> Unit,
+    onClearSearch: () -> Unit,
     onZoomDensityChange: (Int) -> Unit,
     onLayoutChange: (LibraryLayout) -> Unit,
     onBackdropGameChange: (Game?) -> Unit,
@@ -684,6 +944,9 @@ private fun LibraryGames(
     requestInitialFocus: Boolean = false,
     showZoomBar: Boolean = true,
     portrait: Boolean = false,
+    showViewBar: Boolean = true,
+    homeEdges: HomeEdges? = null,
+    homeActionsRequester: FocusRequester? = null,
 ) {
     val context = LocalContext.current
     val firstItemRequester = remember { FocusRequester() }
@@ -694,18 +957,24 @@ private fun LibraryGames(
         state.filter is LibraryFilter.All &&
             state.searchQuery.isBlank() &&
             continueGame != null
-    LaunchedEffect(requestInitialFocus, games.itemCount, showContinue, state.layout) {
-        if (requestInitialFocus && (games.itemCount > 0 || showContinue)) {
+    // Keyed on "has games", not the count: switching console from the dock changes the count, and
+    // re-focusing the content then would pull a controller out of the dock after every step.
+    val hasContent = games.itemCount > 0 || showContinue
+    LaunchedEffect(requestInitialFocus, hasContent, state.contentLayout) {
+        if (requestInitialFocus && hasContent) {
             runCatching { firstItemRequester.requestFocus() }
         }
     }
     val isRefreshing = games.loadState.refresh is LoadState.Loading
     val isEmpty = games.itemCount == 0 && !showContinue && !isRefreshing
-    val showSyncEmpty =
-        isEmpty &&
-            state.searchQuery.isBlank() &&
-            state.filter !is LibraryFilter.Favorites
-    val showViewBar = games.itemCount > 0 || showContinue || portrait
+    // Re-read after scans so "pick a folder" turns into "no games found" once one is chosen.
+    val hasGamesFolder =
+        remember(state.operationInProgress, isEmpty) {
+            !SharedPreferencesHelper.getLegacySharedPreferences(context)
+                .getString(context.getString(com.omnidroid.lib.R.string.pref_key_extenral_folder), null)
+                .isNullOrBlank()
+        }
+    val viewBarVisible = showViewBar && (games.itemCount > 0 || showContinue || portrait)
     val pinchScale = remember { mutableFloatStateOf(1f) }
     val currentZoomDensity by rememberUpdatedState(state.zoomDensity)
     val currentOnZoomDensityChange by rememberUpdatedState(onZoomDensityChange)
@@ -717,7 +986,7 @@ private fun LibraryGames(
                     .weight(1f)
                     .fillMaxWidth()
                     .libraryPinchZoom(
-                        enabled = state.layout == LibraryLayout.GRID,
+                        enabled = state.contentLayout == LibraryLayout.GRID,
                         density = { currentZoomDensity },
                         onDensityChange = { currentOnZoomDensityChange(it) },
                         liveScale = pinchScale,
@@ -732,15 +1001,16 @@ private fun LibraryGames(
                         CircularProgressIndicator()
                     }
                 }
-                showSyncEmpty -> {
-                    LibrarySyncEmpty(
-                        modifier = Modifier,
-                        scanning = state.operationInProgress,
-                        onSync = { StorageFrameworkPickerLauncher.pickFolder(context) },
-                    )
-                }
                 isEmpty -> {
-                    OmnidroidEmptyView(modifier = Modifier)
+                    LibraryEmptyState(
+                        kind = libraryEmptyKind(hasGamesFolder, state.filter, state.searchQuery),
+                        filter = state.filter,
+                        searchQuery = state.searchQuery,
+                        scanning = state.operationInProgress,
+                        onPickFolder = { StorageFrameworkPickerLauncher.pickFolder(context) },
+                        onRescan = { onSync(context) },
+                        onClearSearch = onClearSearch,
+                    )
                 }
                 else -> {
                     Box(
@@ -753,7 +1023,7 @@ private fun LibraryGames(
                                 },
                     ) {
                         val featured = continueGame.takeIf { showContinue }
-                        if (state.layout == LibraryLayout.CONSOLE) {
+                        if (state.contentLayout == LibraryLayout.CONSOLE) {
                             ConsoleLibrary(
                                 modifier = Modifier.fillMaxSize(),
                                 sharedTransitionScope = sharedTransitionScope,
@@ -771,12 +1041,41 @@ private fun LibraryGames(
                                 onFavoriteToggle = onFavoriteToggle,
                                 onBackdropGameChange = onBackdropGameChange,
                             )
+                        } else if (state.contentLayout == LibraryLayout.HOME) {
+                            val edges = homeEdges ?: HomeEdges(contentEdge(portrait), contentEdge(portrait))
+                            // Home's Row view is the console carousel in Home's look, kept between
+                            // Home's top bar and console row and clear of a cutout.
+                            val carouselActionFocus = remember(firstItemRequester, homeActionsRequester) {
+                                CarouselActionFocus(homeActionsRequester ?: FocusRequester(), firstItemRequester)
+                            }
+                            CompositionLocalProvider(
+                                LocalHomeCarouselStyle provides true,
+                                LocalCarouselActionFocus provides carouselActionFocus,
+                            ) {
+                                ConsoleLibrary(
+                                    modifier = Modifier.fillMaxSize().padding(start = edges.start, end = edges.end),
+                                    sharedTransitionScope = sharedTransitionScope,
+                                    animatedVisibilityScope = animatedVisibilityScope,
+                                    games = games,
+                                    featured = featured,
+                                    selection = consoleSelection,
+                                    portrait = portrait,
+                                    showControllerGlyph = requestInitialFocus,
+                                    focusRequester = firstItemRequester,
+                                    onOpenGame = onGameClick,
+                                    onOpenContinueGame = onOpenContinueGame,
+                                    onPlayGame = onContinueClick,
+                                    onGameLongClick = onGameLongClick,
+                                    onFavoriteToggle = onFavoriteToggle,
+                                    onBackdropGameChange = onBackdropGameChange,
+                                )
+                            }
                         } else {
                             key(state.filter, state.searchQuery, state.sort) {
                                 LibraryPagedContent(
                                     games = games,
                                     featured = featured,
-                                    layout = state.layout,
+                                    layout = state.contentLayout,
                                     zoomDensity = state.zoomDensity,
                                     portrait = portrait,
                                     sharedTransitionScope = sharedTransitionScope,
@@ -786,6 +1085,8 @@ private fun LibraryGames(
                                     onContinueClick = onContinueClick,
                                     onGameLongClick = onGameLongClick,
                                     scrollState = pagedScrollState,
+                                    startPadding = homeEdges?.start,
+                                    endPadding = homeEdges?.end,
                                 )
                             }
                         }
@@ -793,12 +1094,12 @@ private fun LibraryGames(
                 }
             }
         }
-        if (showViewBar) {
+        if (viewBarVisible) {
             LibraryViewBar(
                 layout = state.layout,
                 density = state.zoomDensity,
                 portrait = portrait,
-                showZoom = showZoomBar && state.layout == LibraryLayout.GRID,
+                showZoom = showZoomBar && state.contentLayout == LibraryLayout.GRID,
                 onLayoutChange = onLayoutChange,
                 onDensityChange = onZoomDensityChange,
                 modifier = Modifier,
@@ -938,6 +1239,14 @@ internal fun LibraryLayoutToggle(
             iconSize = 16.dp * scale,
         )
         LayoutToggleIcon(
+            selected = layout == LibraryLayout.HOME,
+            icon = Icons.Outlined.Home,
+            contentDescription = stringResource(R.string.library_view_home),
+            onClick = { onLayoutChange(LibraryLayout.HOME) },
+            boxSize = 24.dp * scale,
+            iconSize = 16.dp * scale,
+        )
+        LayoutToggleIcon(
             selected = layout == LibraryLayout.GRID,
             icon = Icons.Filled.GridView,
             contentDescription = stringResource(R.string.library_view_grid),
@@ -950,6 +1259,70 @@ internal fun LibraryLayoutToggle(
             icon = Icons.AutoMirrored.Outlined.ViewList,
             contentDescription = stringResource(R.string.library_view_list),
             onClick = { onLayoutChange(LibraryLayout.LIST) },
+            boxSize = 24.dp * scale,
+            iconSize = 16.dp * scale,
+        )
+    }
+}
+
+/**
+ * Home's own view switch: Row, Grid and List all keep the consoles along the bottom. The first
+ * button goes back to the library with the sidebar, in the layout used before Home.
+ */
+@Composable
+internal fun HomeViewToggle(
+    view: HomeView,
+    onViewChange: (HomeView) -> Unit,
+    onLeaveHome: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val scale = LocalAdaptiveLayout.current.uiScale
+    Row(
+        modifier =
+            modifier
+                .height(28.dp * scale)
+                .background(chromeColors.panel, CircleShape)
+                .border(BorderStroke(1.dp, chromeColors.panelBorder), CircleShape)
+                .padding(2.dp * scale),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        LayoutToggleIcon(
+            selected = false,
+            icon = Icons.Outlined.ViewSidebar,
+            contentDescription = stringResource(R.string.library_view_sidebar),
+            onClick = onLeaveHome,
+            boxSize = 24.dp * scale,
+            iconSize = 16.dp * scale,
+        )
+        Box(
+            modifier =
+                Modifier
+                    .padding(horizontal = 2.dp)
+                    .width(1.dp)
+                    .height(16.dp * scale)
+                    .background(chromeColors.divider),
+        )
+        LayoutToggleIcon(
+            selected = view == HomeView.ROW,
+            icon = Icons.Outlined.ViewWeek,
+            contentDescription = stringResource(R.string.library_view_row),
+            onClick = { onViewChange(HomeView.ROW) },
+            boxSize = 24.dp * scale,
+            iconSize = 16.dp * scale,
+        )
+        LayoutToggleIcon(
+            selected = view == HomeView.GRID,
+            icon = Icons.Filled.GridView,
+            contentDescription = stringResource(R.string.library_view_grid),
+            onClick = { onViewChange(HomeView.GRID) },
+            boxSize = 24.dp * scale,
+            iconSize = 16.dp * scale,
+        )
+        LayoutToggleIcon(
+            selected = view == HomeView.LIST,
+            icon = Icons.AutoMirrored.Outlined.ViewList,
+            contentDescription = stringResource(R.string.library_view_list),
+            onClick = { onViewChange(HomeView.LIST) },
             boxSize = 24.dp * scale,
             iconSize = 16.dp * scale,
         )
@@ -974,14 +1347,15 @@ private fun LayoutToggleIcon(
                     color = if (selected) chromeColors.panelSelected else Color.Transparent,
                     shape = CircleShape,
                 )
-                .clickable(onClick = onClick),
+                // One of console / grid / list: announced as tabs with the current one selected.
+                .selectable(selected = selected, onClick = onClick, role = Role.Tab),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
             imageVector = icon,
             contentDescription = contentDescription,
             modifier = Modifier.size(iconSize),
-            tint = if (selected) LibraryNeonGreen else chromeColors.muted,
+            tint = if (selected) accentColor else chromeColors.muted,
         )
     }
 }
@@ -1073,7 +1447,7 @@ private fun ZoomTrack(
     onPositionChange: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val thumbColor = LibraryNeonGreen
+    val thumbColor = libraryAccentColor
     val trackColor = chromeColors.muted.copy(alpha = 0.45f)
     Box(
         modifier =

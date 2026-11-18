@@ -74,29 +74,25 @@ fun SystemStatusIndicators(
     val connection = rememberConnectionStatus()
     val clock = rememberCurrentTime()
 
+    // Same gap as between the top bar buttons, so every item on the right is evenly spaced.
     Row(
-        modifier = modifier.padding(horizontal = 4.dp),
+        modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        horizontalArrangement = Arrangement.spacedBy(chromeItemGap()),
     ) {
         ConnectionStatusIcon(connection)
         if (gamepadConnected) {
             Icon(
                 imageVector = Icons.Filled.SportsEsports,
                 contentDescription = stringResource(R.string.status_gamepad_connected),
-                modifier = Modifier.size(13.5.dp),
+                modifier = Modifier.size(chromeIconSize()),
                 tint = LocalContentColor.current.copy(alpha = StatusMutedAlpha),
             )
         }
         BatteryStatusIcon(battery)
         Text(
             text = clock,
-            style =
-                MaterialTheme.typography.labelSmall.copy(
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Medium,
-                    letterSpacing = (-0.2).sp,
-                ),
+            style = chromeTextStyle(),
         )
     }
 }
@@ -158,12 +154,7 @@ private fun ConnectionStatusIcon(status: ConnectionStatus) {
         val description = stringResource(R.string.status_cellular_connected, cellularLabel)
         Text(
             text = cellularLabel,
-            style =
-                MaterialTheme.typography.labelSmall.copy(
-                    fontSize = 10.5.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    letterSpacing = (-0.2).sp,
-                ),
+            style = chromeTextStyle(),
             color = LocalContentColor.current.copy(alpha = StatusMutedAlpha),
             modifier = Modifier.semantics { contentDescription = description },
         )
@@ -213,21 +204,17 @@ private fun BatteryStatusIcon(status: BatteryStatus) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(3.dp),
     ) {
-        Text(
-            text = "${status.percent}%",
-            style =
-                MaterialTheme.typography.labelSmall.copy(
-                    fontSize = 10.5.sp,
-                    fontWeight = FontWeight.Medium,
-                    letterSpacing = (-0.2).sp,
-                ),
-            color = color,
-        )
+        // Icon first, then the percentage, as on the system status bar.
         BatteryLevelIcon(
             percent = status.percent,
             charging = status.charging,
             color = color,
             contentDescription = description,
+        )
+        Text(
+            text = "${status.percent}%",
+            style = chromeTextStyle(),
+            color = color,
         )
     }
 }
