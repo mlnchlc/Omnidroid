@@ -2,6 +2,9 @@ package com.omnidroid.app.mobile.shared.controller
 
 import androidx.compose.ui.graphics.Color
 import com.omnidroid.app.mobile.shared.compose.ui.accentColor
+import com.omnidroid.app.mobile.shared.compose.ui.RingPlacement
+import com.omnidroid.app.mobile.shared.compose.ui.drawShapeRing
+import com.omnidroid.app.mobile.shared.compose.ui.onAccentColor
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.drawOutline
@@ -25,13 +28,16 @@ import com.omnidroid.lib.library.db.entity.Game
 /**
  * Controller / D-pad focus ring: a crisp ring in the accent colour (Display > Accent color) drawn
  * just inside the element, so lists, cards and docks that clip their children never cut it. A thin
- * dark line inside the ring keeps it readable on a fill of the same colour (a green Start button).
+ * dark line inside the ring keeps it readable on dark or light fills. Pass [onFill] for an element
+ * filled with the accent (a selected segment, the Start pill): the ring is then drawn in
+ * [onAccentColor] so it still shows.
  */
 fun Modifier.controllerFocusGlow(
     shape: Shape = RoundedCornerShape(12.dp),
     strokeWidth: Dp = 2.dp,
     inset: Dp = 2.dp,
     intensity: Float = 1f,
+    onFill: Boolean = false,
 ): Modifier =
     composed {
         var focused by remember { mutableStateOf(false) }
@@ -40,33 +46,21 @@ fun Modifier.controllerFocusGlow(
             animationSpec = tween(120),
             label = "controllerFocus",
         )
-        val color = accentColor
+        val color = if (onFill) onAccentColor else accentColor
         this
             .onFocusChanged { focused = it.isFocused }
             .drawWithContent {
                 drawContent()
                 val alpha = progress * intensity
                 if (alpha <= 0f) return@drawWithContent
-                val stroke = strokeWidth.toPx()
-                val offset = inset.toPx() + stroke / 2f
-                val ringSize = Size(size.width - offset * 2f, size.height - offset * 2f)
-                if (ringSize.minDimension <= 0f) return@drawWithContent
-                val outline = shape.createOutline(ringSize, layoutDirection, this)
-                translate(offset, offset) {
-                    drawOutline(outline, color.copy(alpha = alpha), style = Stroke(width = stroke))
-                }
-                val line = stroke / 2f
-                val innerOffset = offset + stroke / 2f + line / 2f
-                val innerSize = Size(size.width - innerOffset * 2f, size.height - innerOffset * 2f)
-                if (innerSize.minDimension > 0f) {
-                    translate(innerOffset, innerOffset) {
-                        drawOutline(
-                            shape.createOutline(innerSize, layoutDirection, this),
-                            Color.Black.copy(alpha = 0.55f * alpha),
-                            style = Stroke(width = line),
-                        )
-                    }
-                }
+                drawShapeRing(
+                    shape = shape,
+                    color = color.copy(alpha = alpha),
+                    width = strokeWidth.toPx(),
+                    gap = inset.toPx(),
+                    placement = RingPlacement.Inside,
+                    innerLine = if (onFill) null else Color.Black.copy(alpha = 0.55f * alpha),
+                )
             }
     }
 
