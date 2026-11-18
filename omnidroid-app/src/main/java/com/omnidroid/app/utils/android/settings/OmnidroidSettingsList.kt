@@ -70,15 +70,7 @@ fun OmnidroidSettingsList(
         subtitle = safeSubtitle,
         action =
             if (valueAtEnd) {
-                {
-                    Text(
-                        text = items[selectedIndex] + "  ›",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = chromeColors.muted,
-                        maxLines = 1,
-                        modifier = Modifier.padding(end = 8.dp),
-                    )
-                }
+                { SettingsRowEnd(items[selectedIndex]) }
             } else {
                 action
             },
