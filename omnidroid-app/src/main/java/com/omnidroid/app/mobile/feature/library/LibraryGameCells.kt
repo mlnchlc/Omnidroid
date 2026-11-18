@@ -1,6 +1,5 @@
 package com.omnidroid.app.mobile.feature.library
 
-import com.omnidroid.app.mobile.shared.compose.ui.OnLibraryNeonGreen
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.EnterExitState
 import androidx.compose.animation.ExperimentalSharedTransitionApi
@@ -48,7 +47,7 @@ import androidx.compose.foundation.shape.CircleShape
 import com.omnidroid.app.mobile.shared.compose.ui.GameCardInfoStyle
 import com.omnidroid.app.mobile.shared.compose.ui.GameCoverOrigin
 import com.omnidroid.app.mobile.shared.compose.ui.LibraryGameCardAspectRatio
-import com.omnidroid.app.mobile.shared.compose.ui.LibraryNeonGreen
+import com.omnidroid.app.mobile.shared.compose.ui.accentColor
 import com.omnidroid.app.mobile.shared.compose.ui.LocalAdaptiveLayout
 import com.omnidroid.app.mobile.shared.compose.ui.OmnidroidGameCard
 import com.omnidroid.app.mobile.shared.compose.ui.OmnidroidGameImage
@@ -179,30 +178,8 @@ internal fun LibraryGameRow(
             val trailingShape = RoundedCornerShape(rowCorner - coverInset)
             when {
                 continueAction -> {
-                    // Same pill as Home's Continue button: rounded, green, dark label.
-                    Row(
-                        modifier =
-                            Modifier
-                                .height(36.dp)
-                                .clip(CircleShape)
-                                .background(LibraryNeonGreen)
-                                .padding(start = 14.dp, end = 18.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Icon(
-                            imageVector = WireframeIcons.Play,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp),
-                            tint = HomeOnAccent,
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = stringResource(R.string.continue_playing),
-                            style = homeTextStyle(FontWeight.Bold),
-                            color = HomeOnAccent,
-                            maxLines = 1,
-                        )
-                    }
+                    // Same pill as Home's Continue button.
+                    AccentPill(label = stringResource(R.string.continue_playing), height = 36.dp)
                 }
                 game.isFavorite -> {
                     Box(
@@ -210,14 +187,14 @@ internal fun LibraryGameRow(
                             Modifier
                                 .size(thumbHeight)
                                 .clip(trailingShape)
-                                .background(LibraryNeonGreen.copy(alpha = 0.16f)),
+                                .background(accentColor.copy(alpha = 0.16f)),
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(
                             imageVector = Icons.Filled.Favorite,
                             contentDescription = stringResource(R.string.favorites),
                             modifier = Modifier.size(24.dp),
-                            tint = LibraryNeonGreen,
+                            tint = accentColor,
                         )
                     }
                 }

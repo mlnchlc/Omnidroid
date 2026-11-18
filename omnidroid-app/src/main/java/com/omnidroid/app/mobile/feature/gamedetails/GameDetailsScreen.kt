@@ -1,7 +1,7 @@
 package com.omnidroid.app.mobile.feature.gamedetails
 
-import com.omnidroid.app.mobile.shared.compose.ui.libraryAccentColor
-import com.omnidroid.app.mobile.shared.compose.ui.OnLibraryNeonGreen
+import com.omnidroid.app.mobile.shared.compose.ui.accentColor
+import com.omnidroid.app.mobile.shared.compose.ui.onAccentColor
 import com.omnidroid.app.mobile.shared.compose.ui.contentEdge
 import com.omnidroid.app.mobile.shared.compose.ui.rememberContentEdges
 import android.net.Uri
@@ -91,7 +91,6 @@ import com.omnidroid.app.mobile.shared.compose.dialog.DialogWidth
 import com.omnidroid.app.mobile.shared.compose.dialog.OmnidroidDialog
 import com.omnidroid.app.mobile.shared.compose.dialog.OmnidroidDialogButton
 import com.omnidroid.app.mobile.shared.compose.dialog.OmnidroidDialogTextField
-import com.omnidroid.app.mobile.shared.compose.ui.LibraryNeonGreen
 import com.omnidroid.app.mobile.shared.compose.ui.chromeColors
 import com.omnidroid.app.mobile.shared.compose.ui.GameCoverOrigin
 import com.omnidroid.app.mobile.shared.compose.ui.gameCoverSharedBounds
@@ -703,7 +702,7 @@ private fun GameDetailsTabs(
                     imageVector =
                         if (tab == GameDetailsTab.Info) Icons.Outlined.Info else Icons.Outlined.EmojiEvents,
                     contentDescription = null,
-                    tint = if (selected) libraryAccentColor else chromeMutedContentColor,
+                    tint = if (selected) accentColor else chromeMutedContentColor,
                     modifier = Modifier.size(16.dp),
                 )
                 Text(
@@ -771,7 +770,7 @@ private fun GameDetailsActions(
                     .height(DetailsActionHeight)
                     .controllerFocusGlow(DetailsActionCorner),
             shape = DetailsActionCorner,
-            color = LibraryNeonGreen,
+            color = accentColor,
             shadowElevation = 6.dp,
         ) {
             BoxWithConstraints(
@@ -786,14 +785,14 @@ private fun GameDetailsActions(
                     Icon(
                         imageVector = Icons.Filled.PlayArrow,
                         contentDescription = if (showLabel) null else stringResource(R.string.game_play),
-                        tint = OnLibraryNeonGreen,
+                        tint = onAccentColor,
                         modifier = Modifier.size(22.dp),
                     )
                     if (showLabel) {
                         Text(
                             text = stringResource(R.string.game_play),
                             style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
-                            color = OnLibraryNeonGreen,
+                            color = onAccentColor,
                             textAlign = TextAlign.Center,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
@@ -822,7 +821,7 @@ private fun GameDetailsActions(
                         stringResource(
                             if (isFavorite) R.string.game_context_menu_remove_from_favorites else R.string.game_context_menu_add_to_favorites,
                         ),
-                    tint = if (isFavorite) libraryAccentColor else chromeColors.muted,
+                    tint = if (isFavorite) accentColor else chromeColors.muted,
                     modifier = Modifier.size(20.dp),
                 )
             }

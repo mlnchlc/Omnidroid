@@ -1,5 +1,11 @@
 package com.omnidroid.app.mobile.shared.compose.sidemenu
 
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.BoxWithConstraints
+import com.omnidroid.app.mobile.shared.compose.ui.ChromeShapes
+import com.omnidroid.app.utils.android.settings.SettingsRowEnd
 import androidx.annotation.StringRes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
@@ -128,28 +134,11 @@ fun SideMenuPageScope.MenuAction(
     enabled = enabled, onClick = onClick,
     action =
         if (trailing != null || chevron) {
-            { MenuRowEnd(trailing, chevron) }
+            { SettingsRowEnd(trailing, chevron, MaterialTheme.typography.bodySmall) }
         } else {
             null
         },
 )
-
-@Composable
-internal fun MenuRowEnd(text: String?, chevron: Boolean) {
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(end = 8.dp)) {
-        if (text != null) {
-            Text(text, style = MaterialTheme.typography.bodySmall, color = chromeColors.muted, maxLines = 1)
-        }
-        if (chevron) {
-            Icon(
-                Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                tint = chromeColors.muted,
-                modifier = Modifier.padding(start = 4.dp).size(20.dp),
-            )
-        }
-    }
-}
 
 /** One tile in a [MenuPreviewGrid]: a save slot with its picture, or "No save". */
 data class MenuPreviewItem(
@@ -293,41 +282,61 @@ data class MenuTile(
 )
 
 /**
- * The most-used actions as a row of big tiles, for the portrait sheet where they are easier to
- * hit than list rows. Each tile is a controller focus target like any other row.
+ * The most-used actions as big tiles, easier to hit than list rows, in both the portrait sheet and
+ * the side panel. One row when each tile gets at least [MinTileWidth], else two per row (a narrow
+ * panel, or a large font). Each tile is a controller focus target like any other row.
  */
 @Composable
 fun SideMenuPageScope.MenuTiles(id: String, tiles: List<MenuTile>) {
     key(id) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            tiles.forEach { tile ->
-                val shape = RoundedCornerShape(12.dp)
-                Surface(
-                    onClick = tile.onClick,
-                    // The focus requester must come before the clickable for focus restore to find it.
-                    modifier = itemModifier(tile.id, true, Modifier.weight(1f).height(76.dp).controllerFocusGlow(shape)),
-                    shape = shape,
-                    color = if (tile.highlighted) chromeColors.gameMenuAccent.copy(alpha = 0.18f) else chromeColors.panelSelected,
-                    contentColor = chromeContentColor,
-                    border = BorderStroke(1.dp, if (tile.highlighted) chromeColors.gameMenuAccent else chromeColors.panelBorder),
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center,
-                    ) {
-                        tile.icon()
-                        Text(
-                            tile.label,
-                            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
-                            maxLines = 1,
-                            modifier = Modifier.padding(top = 6.dp),
-                        )
+        BoxWithConstraints(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 12.dp)) {
+            val gap = 8.dp
+            val perRow =
+                if (tiles.size > 2 && (maxWidth - gap * (tiles.size - 1)) / tiles.size < MinTileWidth) 2 else tiles.size
+            Column(verticalArrangement = Arrangement.spacedBy(gap)) {
+                tiles.chunked(perRow).forEach { row ->
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(gap)) {
+                        row.forEach { tile -> MenuTileCell(tile, Modifier.weight(1f)) }
+                        // Keep a short last row's tiles the same width as the ones above.
+                        repeat(perRow - row.size) { Spacer(Modifier.weight(1f)) }
                     }
                 }
             }
+        }
+    }
+}
+
+private val MinTileWidth = 80.dp
+
+@Composable
+private fun SideMenuPageScope.MenuTileCell(
+    tile: MenuTile,
+    modifier: Modifier,
+) {
+    val shape = ChromeShapes.Card
+    Surface(
+        onClick = tile.onClick,
+        // The focus requester must come before the clickable for focus restore to find it.
+        modifier = itemModifier(tile.id, true, modifier.heightIn(min = 76.dp).controllerFocusGlow(shape)),
+        shape = shape,
+        color = if (tile.highlighted) chromeColors.gameMenuAccent.copy(alpha = 0.18f) else chromeColors.panelSelected,
+        contentColor = chromeContentColor,
+        border = BorderStroke(1.dp, if (tile.highlighted) chromeColors.gameMenuAccent else chromeColors.panelBorder),
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 10.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            tile.icon()
+            Text(
+                tile.label,
+                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(top = 6.dp),
+            )
         }
     }
 }

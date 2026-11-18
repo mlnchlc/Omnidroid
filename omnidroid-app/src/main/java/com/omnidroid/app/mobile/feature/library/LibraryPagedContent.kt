@@ -99,6 +99,8 @@ internal fun LibraryPagedContent(
             else -> spacing + 4.dp
         }
         val verticalPadding = if (isList) 12.dp else spacing
+        val startPad = startPadding ?: horizontalPadding
+        val endPad = endPadding ?: horizontalPadding
         val infoStyle = when {
             zoomDensity >= 2 -> GameCardInfoStyle.MINIMAL
             portrait || zoomDensity == 1 -> GameCardInfoStyle.OVERLAY
@@ -107,7 +109,7 @@ internal fun LibraryPagedContent(
         val cellHeight = ((maxHeight - verticalPadding * 2 - spacing * (lanes - 1)) / lanes)
             .coerceAtLeast(1.dp)
         val coverWidth = if (vertical) {
-            ((maxWidth - horizontalPadding * 2 - spacing * (lanes - 1)) / lanes).coerceAtLeast(1.dp)
+            ((maxWidth - startPad - endPad - spacing * (lanes - 1)) / lanes).coerceAtLeast(1.dp)
         } else {
             val coverHeight = if (infoStyle == GameCardInfoStyle.BELOW) {
                 (cellHeight - LibraryCardCaptionHeight).coerceAtLeast(48.dp)
@@ -136,8 +138,8 @@ internal fun LibraryPagedContent(
             )
         }
         val padding = PaddingValues(
-            start = startPadding ?: horizontalPadding,
-            end = endPadding ?: horizontalPadding,
+            start = startPad,
+            end = endPad,
             top = verticalPadding,
             bottom = verticalPadding,
         )

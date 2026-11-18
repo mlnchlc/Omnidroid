@@ -90,6 +90,8 @@ fun GameMenuStatesScreen(
             )
         }
         val noSave = stringResource(R.string.game_menu_no_save)
+        // Wrapped once per bitmap, not on every recomposition of the grid.
+        val previews = remember { java.util.WeakHashMap<android.graphics.Bitmap, androidx.compose.ui.graphics.ImageBitmap>() }
         val gridItems =
             buildList {
                 state.value.autoSave?.let { autoSave ->
@@ -108,12 +110,13 @@ fun GameMenuStatesScreen(
                     )
                 }
                 state.value.entries.forEach { entry ->
+                    val preview = entry.preview?.let { bitmap -> previews.getOrPut(bitmap) { bitmap.asImageBitmap() } }
                     add(
                         MenuPreviewItem(
                             id = "slot-${entry.slot}",
                             title = entry.title,
                             subtitle = entry.description,
-                            preview = entry.preview?.asImageBitmap(),
+                            preview = preview,
                             placeholder = noSave,
                             enabled = entry.enabled,
                             onFocused = { slotPreview?.bitmap = entry.preview },

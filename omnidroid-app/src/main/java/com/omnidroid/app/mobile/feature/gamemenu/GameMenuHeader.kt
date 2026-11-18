@@ -1,5 +1,7 @@
 package com.omnidroid.app.mobile.feature.gamemenu
 
+import com.omnidroid.app.mobile.shared.compose.ui.rememberPlayTimeMs
+import com.omnidroid.app.mobile.shared.compose.ui.formatPlayTime
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -24,8 +26,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.omnidroid.R
-import com.omnidroid.app.mobile.feature.gamedetails.PlayTimeStore
-import com.omnidroid.app.mobile.feature.library.formatPlayTime
 import com.omnidroid.app.mobile.shared.compose.sidemenu.SideMenuRoundButton
 import com.omnidroid.app.mobile.shared.compose.ui.OmnidroidGameImage
 import com.omnidroid.app.mobile.shared.compose.ui.chromeColors
@@ -40,16 +40,10 @@ fun GameMenuHeader(
     onClose: () -> Unit,
 ) {
     val context = LocalContext.current
-    val meta =
-        remember(game.id) {
-            val system = GameUtils.getSystemShortName(context, game)
-            val played = PlayTimeStore(context).get(game.id)
-            if (played > 0L) {
-                context.getString(R.string.game_menu_header_meta, system, formatPlayTime(played))
-            } else {
-                system
-            }
-        }
+    // Same play time as Home's cards: the session log and the older counter, whichever is larger.
+    val system = remember(game.id, game.systemId) { GameUtils.getSystemShortName(context, game) }
+    val played = rememberPlayTimeMs(game)
+    val meta = if (played > 0L) stringResource(R.string.game_menu_header_meta, system, formatPlayTime(played)) else system
     Row(
         modifier = Modifier.fillMaxWidth().height(80.dp).padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
