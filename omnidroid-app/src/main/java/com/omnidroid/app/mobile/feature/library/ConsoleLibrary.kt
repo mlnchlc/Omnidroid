@@ -1,9 +1,7 @@
 package com.omnidroid.app.mobile.feature.library
 
-import com.omnidroid.app.mobile.shared.compose.ui.libraryAccentColor
-import com.omnidroid.app.mobile.shared.compose.ui.OnLibraryNeonGreen
-import androidx.compose.runtime.SideEffect
 import com.omnidroid.app.mobile.shared.compose.ui.accentColor
+import androidx.compose.runtime.SideEffect
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.EnterExitState
 import androidx.compose.animation.ExperimentalSharedTransitionApi
@@ -125,7 +123,6 @@ import com.omnidroid.app.mobile.shared.compose.ui.homeChromeColor
 import com.omnidroid.app.OmnidroidApplication
 import com.omnidroid.app.mobile.feature.gamedetails.PlayTimeStore
 import com.omnidroid.app.mobile.shared.compose.ui.LibraryGameCardAspectRatio
-import com.omnidroid.app.mobile.shared.compose.ui.LibraryNeonGreen
 import com.omnidroid.app.mobile.shared.compose.ui.LocalAdaptiveLayout
 import com.omnidroid.app.mobile.shared.compose.ui.OmnidroidGameImage
 import com.omnidroid.app.mobile.shared.compose.ui.chromeColors
@@ -135,6 +132,8 @@ import com.omnidroid.app.mobile.shared.controller.LocalControllerNavigation
 import com.omnidroid.app.utils.games.GameUtils
 import com.omnidroid.app.shared.covers.backdropRequest
 import com.omnidroid.app.shared.library.GameStatsCache
+import com.omnidroid.app.mobile.shared.compose.ui.formatPlayTime
+import com.omnidroid.app.mobile.shared.compose.ui.gameMetaLine
 import coil.compose.AsyncImage
 import com.omnidroid.lib.library.GameSystem
 import com.omnidroid.lib.library.db.dao.GamePlayStats
@@ -333,7 +332,7 @@ internal fun ConsoleLibrary(
                 .focusRequester(focusRequester)
                 .onFocusChanged { focusState ->
                     hasFocus = focusState.isFocused
-                    actionFocus?.carouselFocused?.value = focusState.isFocused && showControllerGlyph
+                    actionFocus?.carouselFocused?.value = focusState.isFocused
                     if (!focusState.isFocused) navigation?.setFocusedGame(null)
                 }
                 // Only while the carousel itself has focus: keys its buttons (children) don't use
@@ -450,7 +449,8 @@ private class LandscapeMetrics(maxWidth: Dp, maxHeight: Dp) {
     val bigWidth = bigHeight * LibraryGameCardAspectRatio
     // Room under the small cards for the title, meta line and buttons (about 90 dp): on short
     // screens (small 4:3 handhelds) the small cards shrink rather than clip the title.
-    val smallHeight = minOf(bigHeight * 0.48f, bigHeight - gap - HomeInfoMinHeight).coerceAtLeast(bigHeight * 0.32f)
+    // The info area wins over the small cards' size: they may get very small, never the text.
+    val smallHeight = minOf(bigHeight * 0.48f, bigHeight - gap - HomeInfoMinHeight).coerceAtLeast(24.dp)
     val smallWidth = smallHeight * LibraryGameCardAspectRatio
     val top = ((maxHeight - bigHeight) / 2).coerceAtLeast(0.dp)
     // The selected card lines up with the top bar and console row, leaving room for its ring.
@@ -695,7 +695,7 @@ private fun LandscapeInfoPanel(
         // Weighted so a long title gives up lines instead of squeezing the action buttons.
         ConsoleRotatingTitle(
             text = game.displayName,
-            style = MaterialTheme.typography.titleLarge.copy(fontSize = HomeTitleSize, lineHeight = 26.sp, fontWeight = FontWeight.Bold),
+            style = MaterialTheme.typography.titleLarge.copy(fontSize = HomeTitleSize * LocalAdaptiveLayout.current.uiScale, lineHeight = 26.sp * LocalAdaptiveLayout.current.uiScale, fontWeight = FontWeight.Bold),
             // One line (it scrolls when long) so the details and buttons below always fit beside the card.
             maxLines = 1,
             active = true,
@@ -703,7 +703,7 @@ private fun LandscapeInfoPanel(
             color = chromeColors.content,
         )
         Text(
-            text = homeGameMeta(game),
+            text = gameMetaLine(game),
             style = homeTextStyle(),
             color = chromeColors.muted,
             maxLines = 1,
@@ -896,7 +896,7 @@ private fun ConsolePortraitCard(
                     color = Color.White,
                 )
                 Text(
-                    text = homeGameMeta(game),
+                    text = gameMetaLine(game),
                     style = homeTextStyle(),
                     color = Color.White.copy(alpha = 0.75f),
                     maxLines = 1,
@@ -1031,19 +1031,6 @@ internal fun ConsoleStatItem(
         )
     }
 }
-
-internal fun formatPlayTime(playTimeMs: Long): String {
-    if (playTimeMs <= 0L) return "0m"
-    val hours = TimeUnit.MILLISECONDS.toHours(playTimeMs)
-    val minutes = TimeUnit.MILLISECONDS.toMinutes(playTimeMs) % 60
-    return when {
-        hours > 0 && minutes > 0 -> "${hours}h ${minutes}m"
-        hours > 0 -> "${hours}h"
-        minutes > 0 -> "${minutes}m"
-        else -> "< 1m"
-    }
-}
-
 
 /** Keep surfaces and shadows in one opacity layer, with room outside the controls' layout bounds. */
 private fun Modifier.consoleActionFade(

@@ -53,7 +53,7 @@ import com.omnidroid.R
 import com.omnidroid.app.mobile.shared.compose.ui.FloatingChromeButton
 import com.omnidroid.app.mobile.feature.library.LibraryFilter
 import com.omnidroid.app.mobile.feature.library.LibraryTopBar
-import com.omnidroid.app.mobile.shared.compose.ui.LibraryNeonGreen
+import com.omnidroid.app.mobile.shared.compose.ui.accentColor
 import com.omnidroid.app.mobile.shared.compose.ui.LocalAdaptiveLayout
 import com.omnidroid.app.mobile.shared.compose.ui.calculateAdaptiveLayoutSpec
 import com.omnidroid.app.mobile.shared.compose.ui.chromeColors
@@ -181,7 +181,7 @@ fun UiScalePreviewScreen(
                             fontWeight = FontWeight.Bold,
                             letterSpacing = (-0.5).sp,
                         ),
-                    color = LibraryNeonGreen,
+                    color = accentColor,
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 Row(
@@ -209,8 +209,8 @@ fun UiScalePreviewScreen(
                                 .padding(horizontal = 8.dp),
                         colors =
                             SliderDefaults.colors(
-                                thumbColor = LibraryNeonGreen,
-                                activeTrackColor = LibraryNeonGreen,
+                                thumbColor = accentColor,
+                                activeTrackColor = accentColor,
                                 inactiveTrackColor = chromeColors.muted.copy(alpha = 0.3f),
                             ),
                     )
@@ -273,7 +273,7 @@ fun UiScalePreviewScreen(
                         onDismiss()
                     },
                     shape = RoundedCornerShape(12.dp),
-                    color = LibraryNeonGreen,
+                    color = accentColor,
                     modifier =
                         Modifier
                             .height(44.dp)

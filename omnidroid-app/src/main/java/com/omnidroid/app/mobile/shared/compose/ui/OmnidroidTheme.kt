@@ -156,11 +156,6 @@ val onAccentColor: Color
 /** Text and icons on a [LibraryNeonGreen] fill: near-black reads at ~7:1, white only ~2.8:1. */
 val OnLibraryNeonGreen = Color(0xFF0A0A0A)
 
-/** Same as [accentColor]; kept for call sites from before the accent setting. */
-val libraryAccentColor: Color
-    @Composable
-    @ReadOnlyComposable
-    get() = LocalAccentColor.current
 val BatteryLowRed = Color(0xFFFF3B30)
 
 @Immutable

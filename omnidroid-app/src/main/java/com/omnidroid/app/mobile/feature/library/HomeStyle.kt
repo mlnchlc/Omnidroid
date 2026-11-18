@@ -1,9 +1,19 @@
 package com.omnidroid.app.mobile.feature.library
 
+import com.omnidroid.app.mobile.shared.compose.ui.RingPlacement
+import com.omnidroid.app.mobile.shared.compose.ui.accentRing
+import com.omnidroid.app.mobile.shared.compose.ui.SegmentedPills
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.clickable
+import com.omnidroid.app.mobile.shared.compose.ui.LocalAdaptiveLayout
+import com.omnidroid.app.mobile.shared.compose.ui.chromeTextStyle
+import com.omnidroid.app.mobile.shared.compose.ui.onAccentColor
+import com.omnidroid.app.mobile.shared.compose.ui.RoundIconButton
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.foundation.focusGroup
 import androidx.compose.ui.focus.FocusDirection
 import com.omnidroid.app.mobile.shared.compose.ui.accentColor
+import com.omnidroid.app.mobile.shared.compose.ui.gameMetaLine
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.text.TextStyle
@@ -110,7 +120,6 @@ import androidx.compose.ui.unit.min
 import androidx.paging.compose.LazyPagingItems
 import com.omnidroid.app.mobile.shared.compose.ui.GameCardInfoStyle
 import com.omnidroid.app.mobile.shared.compose.ui.LibraryGameCardAspectRatio
-import com.omnidroid.app.mobile.shared.compose.ui.LibraryNeonGreen
 import com.omnidroid.app.mobile.shared.compose.ui.chromeColors
 import com.omnidroid.app.mobile.shared.controller.LocalControllerNavigation
 import com.omnidroid.lib.library.db.entity.Game
@@ -127,12 +136,45 @@ import kotlin.math.roundToInt
 internal fun homeTextStyle(
     weight: FontWeight = FontWeight.Normal,
     size: TextUnit = 13.sp,
-): TextStyle = MaterialTheme.typography.bodyMedium.copy(fontSize = size, fontWeight = weight, letterSpacing = 0.sp)
+): TextStyle = chromeTextStyle(weight).copy(fontSize = size * LocalAdaptiveLayout.current.uiScale)
 
 internal val HomeTitleSize = 20.sp
 
-/** Label colour on Home's green buttons (dark, for contrast on the accent). */
-internal val HomeOnAccent = Color(0xFF0A0A0A)
+/**
+ * The accent pill with a play icon: Home's Start / Continue button, and the Continue marker on a
+ * List row (no [onClick]). Filled with the accent, label in the on-accent colour.
+ */
+@Composable
+internal fun AccentPill(
+    label: String,
+    height: Dp,
+    modifier: Modifier = Modifier,
+    large: Boolean = false,
+    onClick: (() -> Unit)? = null,
+) {
+    val content = onAccentColor
+    Row(
+        modifier =
+            modifier
+                .height(height)
+                .then(if (onClick != null) Modifier.controllerFocusGlow(CircleShape, onFill = true) else Modifier)
+                .clip(CircleShape)
+                .background(accentColor)
+                .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier)
+                .padding(horizontal = if (large) 0.dp else 16.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(WireframeIcons.Play, contentDescription = null, tint = content, modifier = Modifier.size(if (large) 20.dp else 16.dp))
+        Spacer(Modifier.width(8.dp))
+        Text(
+            text = label,
+            style = if (large) MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold) else homeTextStyle(FontWeight.Bold),
+            color = content,
+            maxLines = 1,
+        )
+    }
+}
 
 /** Card corner shared by every Home view. */
 internal val HomeCardCorner = 6.dp
@@ -144,43 +186,6 @@ internal val HomeRingSpace = HomeRingWidth + HomeRingOutset
 
 /** Height the landscape carousel keeps beside the card for title, meta line and buttons. */
 internal val HomeInfoMinHeight = 96.dp
-
-/** "NES · played 12 min. ago · 3h 40m": console, when it was last played and the total play time. */
-@Composable
-internal fun homeGameMeta(game: Game): String {
-    val context = LocalContext.current
-    val system = remember(game.id, game.systemId) { GameUtils.getSystemShortName(context, game) }
-    val playTime = rememberPlayTimeMs(game)
-    val played =
-        game.lastPlayedAt?.let {
-            if (System.currentTimeMillis() - it < DateUtils.MINUTE_IN_MILLIS) {
-                return@let stringResource(R.string.home_played_just_now)
-            }
-            val ago = DateUtils.getRelativeTimeSpanString(
-                it,
-                System.currentTimeMillis(),
-                DateUtils.MINUTE_IN_MILLIS,
-                DateUtils.FORMAT_ABBREV_RELATIVE,
-            )
-            stringResource(R.string.home_played_ago, ago)
-        }
-    return listOfNotNull(
-        system.takeIf { it.isNotBlank() },
-        played,
-        playTime.takeIf { it > 0L }?.let(::formatPlayTime),
-    ).joinToString(" · ")
-}
-
-@Composable
-private fun rememberPlayTimeMs(game: Game): Long {
-    val context = LocalContext.current
-    val db = remember(context) { (context.applicationContext as? OmnidroidApplication)?.retrogradeDb }
-    val stored = remember(context, game.id) { PlayTimeStore(context).get(game.id) }
-    val stats by remember(game.id, db) {
-        db?.gameSessionDao()?.observeStatsForGame(game.id) ?: flowOf(GamePlayStats(totalDurationMs = stored))
-    }.collectAsState(initial = GamePlayStats(totalDurationMs = stored))
-    return maxOf(stats.totalDurationMs, stored)
-}
 
 /**
  * Lets a controller reach the carousel's buttons: the carousel is one focusable that keeps
@@ -212,7 +217,7 @@ internal fun HomeActions(
     /** Smaller buttons for the landscape carousel, where they share the space with the title. */
     compact: Boolean = false,
 ) {
-    val height = if (compact) 38.dp else 52.dp
+    val height = (if (compact) 38.dp else 52.dp) * LocalAdaptiveLayout.current.uiScale
     // Paging only re-emits the game after the database write lands, so flip the heart immediately.
     var favorite by remember(game?.id, game?.isFavorite) { mutableStateOf(game?.isFavorite == true) }
     val carouselFocus = LocalCarouselActionFocus.current
@@ -245,35 +250,19 @@ internal fun HomeActions(
         horizontalArrangement = Arrangement.spacedBy(if (compact) 8.dp else 12.dp, if (compact) Alignment.Start else Alignment.CenterHorizontally),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Surface(
+        AccentPill(
+            label = stringResource(if (continueGame) R.string.continue_playing else R.string.library_console_start),
+            height = height,
+            large = !compact,
             onClick = onPlay,
             modifier =
                 (if (compact) Modifier.widthIn(min = 132.dp) else Modifier.weight(1f).widthIn(max = 240.dp))
                     .then(if (carouselFocus != null) Modifier.focusRequester(carouselFocus.actions) else Modifier)
-                    .onFocusChanged { if (it.isFocused) focusedButton = 0 }
-                    .height(height)
-                    .controllerFocusGlow(CircleShape),
-            shape = CircleShape,
-            color = LibraryNeonGreen,
-            contentColor = HomeOnAccent,
-        ) {
-            Row(
-                modifier = Modifier.padding(horizontal = if (compact) 18.dp else 0.dp),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(WireframeIcons.Play, contentDescription = null, modifier = Modifier.size(if (compact) 16.dp else 20.dp))
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    text = stringResource(if (continueGame) R.string.continue_playing else R.string.library_console_start),
-                    style =
-                        if (compact) homeTextStyle(FontWeight.Bold) else MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                    maxLines = 1,
-                )
-            }
-        }
-        HomeRoundButton(
+                    .onFocusChanged { if (it.isFocused) focusedButton = 0 },
+        )
+        RoundIconButton(
             size = height,
+            bordered = true,
             modifier = Modifier.onFocusChanged { if (it.isFocused) focusedButton = 1 },
             onClick = {
                 game?.let {
@@ -291,33 +280,17 @@ internal fun HomeActions(
                 tint = if (favorite) accentColor else chromeColors.content,
             )
         }
-        HomeRoundButton(size = height, modifier = Modifier.onFocusChanged { if (it.isFocused) focusedButton = 2 }, onClick = onMore) {
+        RoundIconButton(size = height, bordered = true, modifier = Modifier.onFocusChanged { if (it.isFocused) focusedButton = 2 }, onClick = onMore) {
             Icon(WireframeIcons.More, contentDescription = stringResource(R.string.game_settings), tint = chromeColors.content)
         }
     }
 }
 
-@Composable
-private fun HomeRoundButton(
-    size: Dp,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit,
-) {
-    Surface(
-        onClick = onClick,
-        modifier = modifier.size(size).controllerFocusGlow(CircleShape),
-        shape = CircleShape,
-        color = chromeColors.panel,
-        border = BorderStroke(1.dp, chromeColors.panelBorder),
-    ) {
-        Box(contentAlignment = Alignment.Center) { content() }
-    }
-}
-
 /**
  * Accent ring drawn just outside a card, fading in with [amount] (0 to 1) as the card becomes the
- * selection. Drawn outside the bounds, so leave [HomeRingSpace] around the card.
+ * selection, and dimmed while a controller's focus is elsewhere (buttons, top bar), so full
+ * strength shows the carousel itself has focus. Drawn outside the bounds, so leave [HomeRingSpace]
+ * around the card.
  */
 internal fun Modifier.homeSelectionRing(
     corner: Dp,
@@ -325,21 +298,14 @@ internal fun Modifier.homeSelectionRing(
     dimmed: () -> Boolean = { false },
     amount: () -> Float = { 1f },
 ): Modifier =
-    drawWithContent {
-        drawContent()
-        val alpha = amount().coerceIn(0f, 1f)
-        if (alpha <= 0f) return@drawWithContent
-        val outset = HomeRingOutset.toPx() + HomeRingWidth.toPx() / 2
-        drawRoundRect(
-            // Accent; dimmed while a controller's focus is elsewhere (buttons, top bar), so full
-            // strength shows the carousel itself has focus.
-            color = color.copy(alpha = alpha * (if (dimmed()) 0.4f else 1f)),
-            topLeft = Offset(-outset, -outset),
-            size = Size(size.width + outset * 2, size.height + outset * 2),
-            cornerRadius = CornerRadius(corner.toPx() + outset),
-            style = Stroke(width = HomeRingWidth.toPx()),
-        )
-    }
+    accentRing(
+        shape = RoundedCornerShape(corner + HomeRingOutset + HomeRingWidth / 2),
+        color = color,
+        width = HomeRingWidth,
+        gap = HomeRingOutset,
+        placement = RingPlacement.Outside,
+        alpha = { amount() * (if (dimmed()) 0.4f else 1f) },
+    )
 
 /**
  * The view control for the top bar: the three-way switch when it fits beside search in [room],
@@ -359,11 +325,16 @@ internal fun HomeViewControl(
     }
 }
 
-/** Home's Carousel / Grid / List switch, sized to sit in the top bar beside search. */
 /** Width of [HomeViewSwitch]: three segments plus its inset and gaps. */
 @Composable
-internal fun homeViewSwitchWidth(): Dp = chromeButtonSize() * 3.2f + 4.dp
+internal fun homeViewSwitchWidth(): Dp =
+    // Three square segments, the inset either side, and the 2 dp gaps between segments.
+    chromeButtonSize() * (HomeView.entries.size + 2 * HomeViewSwitchInset) + 2.dp * (HomeView.entries.size - 1)
 
+/** [HomeViewSwitch]'s inset around its segments, as a fraction of its height. */
+private const val HomeViewSwitchInset = 0.1f
+
+/** Home's Carousel / Grid / List switch, sized to sit in the top bar beside search. */
 @Composable
 internal fun HomeViewSwitch(
     view: HomeView,
@@ -372,37 +343,24 @@ internal fun HomeViewSwitch(
 ) {
     // Same height as the other top bar controls; segments in the wireframe's 44 : 36 proportion.
     val height = chromeButtonSize()
-    val inset = height * 0.1f
-    Row(
-        modifier =
-            modifier
-                .height(height)
-                .background(chromeColors.panel, CircleShape)
-                .border(BorderStroke(1.dp, chromeColors.panelBorder), CircleShape)
-                .padding(inset)
-                .selectableGroup(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(2.dp),
-    ) {
-        HomeView.entries.forEach { option ->
-            val selected = option == view
-            Box(
-                modifier =
-                    Modifier
-                        .size(width = height, height = height - inset * 2)
-                        .controllerFocusGlow(CircleShape)
-                        .background(if (selected) chromeColors.panelSelected else Color.Transparent, CircleShape)
-                        .selectable(selected = selected, role = Role.Tab) { onViewChange(option) },
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = option.icon(),
-                    contentDescription = stringResource(option.labelRes()),
-                    modifier = Modifier.size(chromeIconSize()),
-                    tint = if (selected) accentColor else chromeColors.muted,
-                )
-            }
-        }
+    val inset = height * HomeViewSwitchInset
+    SegmentedPills(
+        options = HomeView.entries,
+        selected = view,
+        onSelect = onViewChange,
+        modifier = modifier.height(height),
+        segmentHeight = height - inset * 2,
+        segmentWidth = height,
+        inset = inset,
+        background = chromeColors.panel,
+        role = Role.Tab,
+    ) { option, colors ->
+        Icon(
+            imageVector = option.icon(),
+            contentDescription = stringResource(option.labelRes()),
+            modifier = Modifier.size(chromeIconSize()),
+            tint = if (option == view) colors.content else chromeColors.muted,
+        )
     }
 }
 

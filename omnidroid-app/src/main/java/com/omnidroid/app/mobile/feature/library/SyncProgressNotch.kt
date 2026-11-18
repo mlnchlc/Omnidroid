@@ -45,7 +45,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.omnidroid.R
-import com.omnidroid.app.mobile.shared.compose.ui.LibraryNeonGreen
+import com.omnidroid.app.mobile.shared.compose.ui.accentColor
 import com.omnidroid.app.mobile.shared.compose.ui.LocalAdaptiveLayout
 import com.omnidroid.app.mobile.shared.compose.ui.chromeColors
 import com.omnidroid.lib.core.SyncProgress
@@ -294,6 +294,7 @@ fun SyncProgressNotch(
     // Keep the fill identical to the console selectors and side menus, without a green tint.
     val panelBg = chromeColors.panel
 
+    val accent = accentColor
     Box(
         modifier =
             modifier
@@ -313,7 +314,7 @@ fun SyncProgressNotch(
                     drawPath(fillPath, color = panelBg)
                     drawPath(
                         strokePath,
-                        color = LibraryNeonGreen.copy(alpha = strobeAlpha),
+                        color = accent.copy(alpha = strobeAlpha),
                         style = Stroke(width = strokeWidth.toPx()),
                     )
                 },
@@ -332,7 +333,7 @@ fun SyncProgressNotch(
                     Modifier
                         .size((5.5f * scale).dp)
                         .clip(CircleShape)
-                        .background(LibraryNeonGreen.copy(alpha = dotAlpha)),
+                        .background(accentColor.copy(alpha = dotAlpha)),
             )
             Spacer(modifier = Modifier.width((6 * scale).dp))
             Text(

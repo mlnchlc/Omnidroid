@@ -1,5 +1,6 @@
 package com.omnidroid.app.mobile.feature.profile
 
+import com.omnidroid.app.mobile.shared.compose.ui.RailScaffold
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.FocusRequester
@@ -43,7 +44,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SecondaryTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
-import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -75,7 +75,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import coil.compose.AsyncImage
 import com.omnidroid.R
-import com.omnidroid.app.mobile.shared.compose.ui.LibraryNeonGreen
+import com.omnidroid.app.mobile.shared.compose.ui.accentColor
 import com.omnidroid.app.mobile.shared.compose.ui.chromeColors
 import com.omnidroid.app.mobile.shared.compose.ui.chromeContentColor
 import com.omnidroid.app.mobile.shared.compose.ui.chromeMutedContentColor
@@ -184,23 +184,7 @@ internal fun ProfileContent(
             } else {
                 20.dp
             }
-        Row(Modifier.widthIn(max = 1200.dp).fillMaxSize()) {
-            if (showProfileRail) {
-                Column(
-                    Modifier.width(240.dp).fillMaxHeight()
-                        .focusProperties { right = tabsRequester }
-                        .verticalScroll(rememberScrollState())
-                        .padding(horizontal = 20.dp, vertical = 12.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                ) {
-                    ProfileIdentity(state, onEditTag, onEditPhoto, compact = true)
-                    ProfileProgress(state)
-                    ProfilePlaytime(state.totalPlayTimeMs)
-                    ProfileDivider()
-                    ProfileStreak(state)
-                }
-                VerticalDivider(color = chromeColors.divider)
-            }
+        val grid: @Composable (Modifier) -> Unit = { gridModifier ->
             LazyVerticalGrid(
                 columns =
                     if (selectedTab == 1) {
@@ -209,7 +193,7 @@ internal fun ProfileContent(
                         GridCells.Fixed(1)
                     },
                 state = listState,
-                modifier = Modifier.weight(1f).fillMaxHeight(),
+                modifier = gridModifier,
                 contentPadding = PaddingValues(horizontal = horizontalPadding, vertical = 8.dp),
             ) {
                 if (!showProfileRail) {
@@ -225,7 +209,7 @@ internal fun ProfileContent(
                     SecondaryTabRow(
                         selectedTabIndex = selectedTab,
                         containerColor = homeChromeColor,
-                        contentColor = LibraryNeonGreen,
+                        contentColor = accentColor,
                         divider = { ProfileDivider() },
                     ) {
                         listOf(R.string.profile_sessions_tab, R.string.profile_consoles_tab).forEachIndexed {
@@ -290,7 +274,7 @@ internal fun ProfileContent(
                         item(key = "sessions_loading", span = { GridItemSpan(maxLineSpan) }, contentType = "loading") {
                             LinearProgressIndicator(
                                 modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
-                                color = LibraryNeonGreen,
+                                color = accentColor,
                                 trackColor = chromeColors.divider,
                             )
                         }
@@ -377,6 +361,31 @@ internal fun ProfileContent(
                 }
             }
         }
+        if (showProfileRail) {
+            // Summary rail beside the tabs, as in Settings.
+            RailScaffold(
+                modifier = Modifier.widthIn(max = 1200.dp).fillMaxSize(),
+                minRail = 220.dp,
+                rail = { railModifier ->
+                    Column(
+                        railModifier
+                            .focusProperties { right = tabsRequester }
+                            .verticalScroll(rememberScrollState())
+                            .padding(horizontal = 20.dp, vertical = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                    ) {
+                        ProfileIdentity(state, onEditTag, onEditPhoto, compact = true)
+                        ProfileProgress(state)
+                        ProfilePlaytime(state.totalPlayTimeMs)
+                        ProfileDivider()
+                        ProfileStreak(state)
+                    }
+                },
+                content = grid,
+            )
+        } else {
+            grid(Modifier.widthIn(max = 1200.dp).fillMaxSize())
+        }
     }
 }
 
@@ -438,7 +447,7 @@ private fun ProfileConsoleTile(achievement: ConsoleAchievement) {
                 Icon(
                     Icons.Outlined.Check,
                     contentDescription = null,
-                    tint = LibraryNeonGreen,
+                    tint = accentColor,
                     modifier = Modifier.size(12.dp),
                 )
             }
