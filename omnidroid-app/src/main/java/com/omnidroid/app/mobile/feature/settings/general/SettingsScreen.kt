@@ -8,6 +8,8 @@ import com.omnidroid.app.utils.android.settings.LocalSettingsGroupsAsCards
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Box
+import com.omnidroid.app.mobile.shared.compose.ui.RailScaffold
+import com.omnidroid.app.utils.android.settings.SettingsCardInset
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -145,38 +147,38 @@ fun SettingsScreen(
         val edges = rememberContentEdges(contentEdge(portrait = !isLandscape))
 
         if (isLandscape) {
-            Row(
+            RailScaffold(
                 modifier =
                     Modifier
                         .fillMaxSize()
                         // The rail lines up with the top bar's Back button; the content cards, which
-                        // carry their own 16 dp inset, end where the top bar's status ends.
-                        .padding(start = edges.start, end = (edges.end - 16.dp).coerceAtLeast(0.dp)),
-            ) {
-                SettingsSidebar(
-                    modifier =
-                        Modifier
-                            .focusGroup()
-                            .focusProperties { right = contentFocusRequester },
-                    selected = section,
-                    focusRequesters = sidebarFocusRequesters,
-                    onFocused = {
-                        if (section != it) {
+                        // carry their own inset, end where the top bar's status ends.
+                        .padding(start = edges.start, end = (edges.end - SettingsCardInset).coerceAtLeast(0.dp)),
+                rail = { railModifier ->
+                    SettingsSidebar(
+                        modifier =
+                            railModifier
+                                .focusGroup()
+                                .focusProperties { right = contentFocusRequester },
+                        selected = section,
+                        focusRequesters = sidebarFocusRequesters,
+                        onFocused = {
+                            if (section != it) {
+                                section = it
+                                path = SettingsBackStack()
+                            }
+                        },
+                        onActivate = {
                             section = it
                             path = SettingsBackStack()
-                        }
-                    },
-                    onActivate = {
-                        section = it
-                        path = SettingsBackStack()
-                        pendingContentFocus = true
-                    },
-                )
+                            pendingContentFocus = true
+                        },
+                    )
+                },
+            ) { contentModifier ->
                 Box(
                     modifier =
-                        Modifier
-                            .weight(1f)
-                            .fillMaxHeight()
+                        contentModifier
                             .focusGroup()
                             .focusProperties {
                                 left = sidebarFocusRequesters.getValue(section)
