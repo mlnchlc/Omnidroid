@@ -19,7 +19,7 @@ import com.omnidroid.app.shared.settings.rememberHdModeAllowed
 import com.omnidroid.app.utils.android.settings.OmnidroidSettingsGroup
 import com.omnidroid.app.utils.android.settings.OmnidroidSettingsList
 import com.omnidroid.app.mobile.feature.library.HomeView
-import com.omnidroid.app.mobile.feature.library.LibraryLayout
+import com.omnidroid.app.mobile.feature.library.HomeViewPrefs
 import com.omnidroid.app.mobile.feature.library.LibraryViewModel
 import com.omnidroid.app.utils.android.settings.OmnidroidSettingsMenuLink
 import com.omnidroid.app.utils.android.settings.OmnidroidSettingsSegmented
@@ -92,45 +92,34 @@ internal fun DisplaySettings(navController: NavController) {
         )
     }
     SettingsHorizontalDivider()
-    val libraryLayout =
-        indexPreferenceState(
-            LibraryViewModel.LAYOUT_KEY,
-            LibraryLayout.CONSOLE.name,
-            LibraryLayout.entries.map { it.name },
+    val viewNames =
+        listOf(
+            stringResource(R.string.library_layout_carousel_short),
+            stringResource(R.string.library_layout_grid_short),
+            stringResource(R.string.library_layout_list_short),
         )
     OmnidroidSettingsGroup(titleRes = R.string.settings_section_home) {
+        // Each orientation keeps its own view; the Home top bar changes the one in use.
         OmnidroidSettingsSegmented(
-            state = libraryLayout,
-            titleRes = R.string.settings_title_library_layout,
-            subtitleRes = R.string.settings_description_library_layout,
-            items =
-                LibraryLayout.entries.map {
-                    stringResource(
-                        when (it) {
-                            LibraryLayout.CONSOLE -> R.string.library_layout_console_short
-                            LibraryLayout.HOME -> R.string.library_layout_home_short
-                            LibraryLayout.GRID -> R.string.library_layout_grid_short
-                            LibraryLayout.LIST -> R.string.library_layout_list_short
-                        },
-                    )
-                },
-        )
-        OmnidroidSettingsSegmented(
-            enabled = LibraryLayout.entries.getOrNull(libraryLayout.value) == LibraryLayout.HOME,
             state =
                 indexPreferenceState(
-                    LibraryViewModel.HOME_VIEW_KEY,
-                    HomeView.ROW.name,
+                    HomeViewPrefs.LANDSCAPE_KEY,
+                    HomeView.CAROUSEL.name,
                     HomeView.entries.map { it.name },
                 ),
-            titleRes = R.string.settings_title_home_view,
+            titleRes = R.string.settings_title_home_view_landscape,
             subtitleRes = R.string.settings_description_home_view,
-            items =
-                listOf(
-                    stringResource(R.string.library_layout_row_short),
-                    stringResource(R.string.library_layout_grid_short),
-                    stringResource(R.string.library_layout_list_short),
+            items = viewNames,
+        )
+        OmnidroidSettingsSegmented(
+            state =
+                indexPreferenceState(
+                    HomeViewPrefs.PORTRAIT_KEY,
+                    HomeView.CAROUSEL.name,
+                    HomeView.entries.map { it.name },
                 ),
+            titleRes = R.string.settings_title_home_view_portrait,
+            items = viewNames,
         )
     }
     SettingsHorizontalDivider()

@@ -1,5 +1,7 @@
 package com.omnidroid.app.mobile.feature.settings.general
 
+import com.omnidroid.app.mobile.feature.main.navigateToRoute
+import com.omnidroid.app.mobile.feature.main.MainRoute
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -55,14 +57,16 @@ internal fun SettingsContentPane(
             SettingsSection.LIBRARY -> {
                 RomsSettings(state, { viewModel.changeLocalStorageFolder() }, indexingInProgress, scanInProgress)
                 SettingsHorizontalDivider()
-                StartupScreenSettings(availableConsoles)
-                SettingsHorizontalDivider()
                 LibraryMaintenanceSettings(onNavigateSubscreen)
             }
             SettingsSection.DISPLAY -> DisplaySettings(navController)
             SettingsSection.CONTROLS -> ControllerSettings(onNavigateSubscreen)
             SettingsSection.SAVES -> SavesSettings(state.isSaveSyncSupported, onNavigateSubscreen)
-            SettingsSection.EMULATION -> EmulationSettings(indexingInProgress, onNavigateSubscreen)
+            SettingsSection.EMULATION -> {
+                ConsoleSettings(availableConsoles) { navController.navigateToRoute(MainRoute.ADD_CONSOLES) }
+                SettingsHorizontalDivider()
+                EmulationSettings(indexingInProgress, onNavigateSubscreen)
+            }
             SettingsSection.ADVANCED -> AdvancedSettings(cacheState, viewModel)
             SettingsSection.ABOUT -> AboutSettings()
         }
