@@ -1,8 +1,9 @@
 package com.omnidroid.app.mobile.feature.gamedetails
 
+import com.omnidroid.app.mobile.shared.compose.ui.libraryAccentColor
+import com.omnidroid.app.mobile.shared.compose.ui.OnLibraryNeonGreen
 import com.omnidroid.app.mobile.shared.compose.ui.contentEdge
 import com.omnidroid.app.mobile.shared.compose.ui.rememberContentEdges
-
 import android.net.Uri
 import android.view.ViewGroup
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -51,6 +52,8 @@ import androidx.compose.material.icons.outlined.PlayCircle
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -96,6 +99,7 @@ import com.omnidroid.app.mobile.shared.compose.ui.chromeMutedContentColor
 import com.omnidroid.app.mobile.shared.compose.ui.homeChromeBackground
 import com.omnidroid.app.mobile.shared.controller.LocalControllerNavigation
 import com.omnidroid.app.mobile.shared.controller.controllerFocusGlow
+import com.omnidroid.app.shared.covers.CoverCacheStore
 import com.omnidroid.app.shared.covers.CoverUtils
 import com.omnidroid.app.utils.games.GameUtils
 import com.omnidroid.lib.library.db.entity.Game
@@ -120,6 +124,8 @@ fun GameDetailsScreen(
     onOpenSettings: (Game) -> Unit,
     onSetCustomName: (Game, String) -> Unit = { _, _ -> },
     onSetCustomThumbnail: (Game, Uri) -> Unit = { _, _ -> },
+    onSearchCover: ((Game) -> Unit)? = null,
+    onRemoveCover: (Game) -> Unit = {},
     backdropTopBleed: Dp = 0.dp,
     coverOrigin: GameCoverOrigin = GameCoverOrigin.Library,
 ) {
@@ -244,6 +250,8 @@ fun GameDetailsScreen(
                         pendingCoverGame = game
                         coverPicker.launch("image/*")
                     },
+                    onSearchCover = onSearchCover?.let { search -> { search(game) } },
+                    onRemoveCover = { onRemoveCover(game) },
                 )
             }
             val artwork: @Composable (Modifier) -> Unit = { artworkModifier ->
@@ -363,8 +371,11 @@ private fun GameCoverOrTrailer(
     onToggleTrailer: () -> Unit,
     onStopTrailer: () -> Unit,
     onEditCover: () -> Unit,
+    onSearchCover: (() -> Unit)? = null,
+    onRemoveCover: () -> Unit = {},
 ) {
     val hasTrailer = !trailerUrl.isNullOrBlank()
+    var coverMenuOpen by remember { mutableStateOf(false) }
     val coverShape = RoundedCornerShape(cornerRadius)
     val coverSharedModifier = Modifier.gameCoverSharedBounds(
         sharedTransitionScope, animatedVisibilityScope, game.id, cornerRadius, coverOrigin,
@@ -391,7 +402,7 @@ private fun GameCoverOrTrailer(
                         .then(coverSharedModifier),
                 shape = coverShape,
                 tonalElevation = 6.dp,
-                color = Color(0xFF161616),
+                color = chromeColors.listRow,
             ) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -447,18 +458,54 @@ private fun GameCoverOrTrailer(
                     }
                 }
             }
-            Icon(
-                imageVector = Icons.Outlined.Edit,
-                contentDescription = stringResource(R.string.game_context_menu_change_thumbnail),
-                tint = Color.White.copy(alpha = 0.55f),
-                modifier =
-                    Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(8.dp)
-                        .size(18.dp)
-                        .clip(RoundedCornerShape(4.dp))
-                        .clickable(onClick = onEditCover),
-            )
+            Box(modifier = Modifier.align(Alignment.TopEnd)) {
+                IconButton(
+                    onClick = { coverMenuOpen = true },
+                    modifier = Modifier.size(48.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Edit,
+                        contentDescription = stringResource(R.string.game_context_menu_change_thumbnail),
+                        tint = Color.White.copy(alpha = 0.55f),
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+                // Same cover options as the library game menu's Appearance page.
+                DropdownMenu(expanded = coverMenuOpen, onDismissRequest = { coverMenuOpen = false }) {
+                    val customCover = game.customCoverPath != null
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                stringResource(
+                                    if (customCover) R.string.game_context_menu_change_thumbnail else R.string.game_context_menu_set_custom_thumbnail,
+                                ),
+                            )
+                        },
+                        onClick = {
+                            coverMenuOpen = false
+                            onEditCover()
+                        },
+                    )
+                    onSearchCover?.let { search ->
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.game_context_menu_search_cover)) },
+                            onClick = {
+                                coverMenuOpen = false
+                                search()
+                            },
+                        )
+                    }
+                    if (customCover) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.game_context_menu_remove_thumbnail)) },
+                            onClick = {
+                                coverMenuOpen = false
+                                onRemoveCover()
+                            },
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -474,8 +521,10 @@ private fun OmnidroidPoster(
     val fallback = remember(game) { CoverUtils.getFallbackDrawable(game) }
     val fallbackPainter = rememberDrawablePainter(drawable = fallback)
     val request = remember(context, game.id, game.coverFrontUrl, game.customCoverPath, preferredCoverUrl) {
-        val cover = CoverUtils.coverRequest(context, game, preferredCoverUrl)
-        cover.newBuilder().placeholderMemoryCacheKey(cover.memoryCacheKey).build()
+        // Show the sharper detail-size cover; the grid cover (usually in memory) stands in while it loads.
+        val grid = CoverUtils.coverRequest(context, game, preferredCoverUrl)
+        val cover = CoverUtils.coverRequest(context, game, preferredCoverUrl, tier = CoverCacheStore.Tier.DETAIL)
+        cover.newBuilder().placeholderMemoryCacheKey(grid.memoryCacheKey).build()
     }
     AsyncImage(
         model = request,
@@ -654,7 +703,7 @@ private fun GameDetailsTabs(
                     imageVector =
                         if (tab == GameDetailsTab.Info) Icons.Outlined.Info else Icons.Outlined.EmojiEvents,
                     contentDescription = null,
-                    tint = if (selected) LibraryNeonGreen else chromeMutedContentColor,
+                    tint = if (selected) libraryAccentColor else chromeMutedContentColor,
                     modifier = Modifier.size(16.dp),
                 )
                 Text(
@@ -737,14 +786,14 @@ private fun GameDetailsActions(
                     Icon(
                         imageVector = Icons.Filled.PlayArrow,
                         contentDescription = if (showLabel) null else stringResource(R.string.game_play),
-                        tint = Color.White,
+                        tint = OnLibraryNeonGreen,
                         modifier = Modifier.size(22.dp),
                     )
                     if (showLabel) {
                         Text(
                             text = stringResource(R.string.game_play),
                             style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
-                            color = Color.White,
+                            color = OnLibraryNeonGreen,
                             textAlign = TextAlign.Center,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
@@ -769,8 +818,11 @@ private fun GameDetailsActions(
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Icon(
                     imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                    contentDescription = stringResource(R.string.favorites),
-                    tint = if (isFavorite) LibraryNeonGreen else chromeColors.muted,
+                    contentDescription =
+                        stringResource(
+                            if (isFavorite) R.string.game_context_menu_remove_from_favorites else R.string.game_context_menu_add_to_favorites,
+                        ),
+                    tint = if (isFavorite) libraryAccentColor else chromeColors.muted,
                     modifier = Modifier.size(20.dp),
                 )
             }

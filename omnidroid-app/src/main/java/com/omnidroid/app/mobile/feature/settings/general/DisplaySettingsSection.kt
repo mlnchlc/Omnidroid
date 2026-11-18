@@ -4,6 +4,8 @@ import com.omnidroid.app.utils.android.settings.stringPreferenceState
 import com.omnidroid.app.utils.android.settings.OmnidroidSettingsColorChoice
 import com.omnidroid.app.mobile.shared.compose.ui.LocalAppDarkTheme
 import com.omnidroid.app.mobile.shared.compose.ui.AccentPreset
+import androidx.compose.material3.MaterialTheme
+import com.omnidroid.app.shared.settings.HDModeQuality
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -121,6 +123,19 @@ internal fun DisplaySettings(navController: NavController) {
             valueRange = 0f..2f,
             titleRes = R.string.settings_title_hd_quality,
             subtitleRes = R.string.settings_description_hd_quality,
+            valueText = { value ->
+                Text(
+                    text =
+                        stringResource(
+                            when (HDModeQuality.parse(value)) {
+                                HDModeQuality.LOW -> R.string.settings_hd_quality_low
+                                HDModeQuality.MEDIUM -> R.string.settings_hd_quality_medium
+                                HDModeQuality.HIGH -> R.string.settings_hd_quality_high
+                            },
+                        ),
+                    style = MaterialTheme.typography.titleMedium,
+                )
+            },
         )
         OmnidroidSettingsList(
             enabled = !hdMode.value,
