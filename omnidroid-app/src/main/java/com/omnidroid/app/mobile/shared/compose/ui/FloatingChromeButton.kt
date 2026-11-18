@@ -3,6 +3,10 @@ package com.omnidroid.app.mobile.shared.compose.ui
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -42,12 +46,12 @@ internal fun chromeButtonSize(): Dp {
 @Composable
 internal fun chromeItemGap(): Dp = chromeButtonSize() * 0.27f
 
-/** One text style for the top bar: search, status read-outs and labels. */
+/** One text style for the chrome (top bar, Home, menus): 13 sp, scaled with the UI scale setting. */
 @Composable
-internal fun chromeTextStyle(): TextStyle =
+internal fun chromeTextStyle(weight: FontWeight = FontWeight.Medium): TextStyle =
     MaterialTheme.typography.labelLarge.copy(
         fontSize = 13.sp * LocalAdaptiveLayout.current.uiScale,
-        fontWeight = FontWeight.Medium,
+        fontWeight = weight,
         letterSpacing = 0.sp,
     )
 
@@ -61,20 +65,39 @@ fun FloatingChromeButton(
     onClick: () -> Unit,
     content: @Composable () -> Unit,
 ) {
+    RoundIconButton(onClick = onClick, content = content)
+}
+
+/**
+ * The app's round icon button: top bar, Home's actions, the game menu. [fill] is the resting colour
+ * (transparent for an outline-only button); it darkens while pressed. [bordered] adds the 1 dp panel
+ * border.
+ */
+@Composable
+fun RoundIconButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    size: Dp = chromeButtonSize(),
+    fill: Color = chromeColors.panel,
+    bordered: Boolean = false,
+    content: @Composable () -> Unit,
+) {
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
     val background by animateColorAsState(
-        targetValue = if (pressed) chromeColors.pressed else chromeColors.panel,
+        targetValue = if (pressed) chromeColors.pressed else fill,
         animationSpec = tween(120),
-        label = "chromeButtonPressed",
+        label = "roundIconButtonPressed",
     )
+    val border = chromeColors.panelBorder
     Box(
         modifier =
-            Modifier
-                .size(chromeButtonSize())
+            modifier
+                .size(size)
                 .controllerFocusGlow(CircleShape)
                 .clip(CircleShape)
                 .background(background)
+                .then(if (bordered) Modifier.border(1.dp, border, CircleShape) else Modifier)
                 .clickable(
                     interactionSource = interactionSource,
                     indication = null,
@@ -83,6 +106,6 @@ fun FloatingChromeButton(
                 ),
         contentAlignment = Alignment.Center,
     ) {
-        content()
+        CompositionLocalProvider(LocalContentColor provides chromeContentColor) { content() }
     }
 }
