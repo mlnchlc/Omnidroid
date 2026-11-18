@@ -35,8 +35,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.room.Room
 import androidx.test.platform.app.InstrumentationRegistry
 import com.omnidroid.app.mobile.feature.library.LibraryFilter
-import com.omnidroid.app.mobile.feature.library.HomeView
-import com.omnidroid.app.mobile.feature.library.HomeViewPrefs
+import com.omnidroid.app.mobile.feature.library.LibraryLayout
 import com.omnidroid.app.mobile.feature.library.LibraryScreen
 import com.omnidroid.app.mobile.feature.library.LibraryStartupStore
 import com.omnidroid.app.mobile.feature.library.LibraryViewModel
@@ -62,18 +61,19 @@ class LibraryCapacityTest {
         val args = InstrumentationRegistry.getArguments()
         val count = args.getString("games", "1000").toInt()
         require(count in 1..10_000_000)
-        // CAROUSEL, GRID or LIST (CONSOLE and ROW still mean the carousel).
-        val layout = requireNotNull(HomeView.fromName(args.getString("layout", "GRID").let { if (it == "CONSOLE") "CAROUSEL" else it }))
+        val layout = LibraryLayout.valueOf(args.getString("layout", "GRID"))
         val landscape = args.getString("orientation", "portrait") == "landscape"
         val swipes = args.getString("swipes", "30").toInt()
         val zoom = args.getString("zoom", "2").toInt().also { require(it in 0..2) }
         val featured = args.getString("featured", "false").toBoolean()
         val context = compose.activity.applicationContext
         val preferences = SharedPreferencesHelper.getSharedPreferences(context)
-        val layoutKeys = listOf(HomeViewPrefs.LANDSCAPE_KEY, HomeViewPrefs.PORTRAIT_KEY)
+        val layoutKey = "pref_library_layout"
+        val portraitLayoutKey = "pref_library_layout_portrait"
         val zoomKey = "pref_library_zoom_density"
         val sortKey = "pref_library_sort"
-        val oldLayouts = layoutKeys.map { preferences.getString(it, null) }
+        val oldLayout = preferences.getString(layoutKey, null)
+        val oldPortraitLayout = preferences.getString(portraitLayoutKey, null)
         val oldZoom = preferences.getInt(zoomKey, 0)
         val hadZoom = preferences.contains(zoomKey)
         val oldSort = preferences.getString(sortKey, null)
@@ -106,7 +106,7 @@ class LibraryCapacityTest {
             }
             val seedMs = SystemClock.elapsedRealtime() - seedStart
             // The VM reads initial presentation once; restore before rendering the trial.
-            preferences.edit().putString(layoutKeys[0], layout.name).putString(layoutKeys[1], layout.name).putInt(zoomKey, zoom)
+            preferences.edit().putString(layoutKey, layout.name).putString(portraitLayoutKey, layout.name).putInt(zoomKey, zoom)
                 .putString(sortKey, "TITLE").commit()
             compose.runOnUiThread {
                 compose.activity.window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
@@ -122,7 +122,8 @@ class LibraryCapacityTest {
                 vm!!.selectFilter(LibraryFilter.All)
             }
             preferences.edit().apply {
-                layoutKeys.zip(oldLayouts).forEach { (key, old) -> if (old == null) remove(key) else putString(key, old) }
+                if (oldLayout == null) remove(layoutKey) else putString(layoutKey, oldLayout)
+                if (oldPortraitLayout == null) remove(portraitLayoutKey) else putString(portraitLayoutKey, oldPortraitLayout)
                 if (hadZoom) putInt(zoomKey, oldZoom) else remove(zoomKey)
                 if (oldSort == null) remove(sortKey) else putString(sortKey, oldSort)
             }.commit()
@@ -152,7 +153,7 @@ class LibraryCapacityTest {
             if (featured) {
                 compose.waitUntil(10_000) { viewModel.state.value.continueGame?.id == 1 }
                 compose.waitForIdle()
-                if (layout != HomeView.CAROUSEL) scrollTo(0)
+                if (layout != LibraryLayout.CONSOLE) scrollTo(0)
                 compose.onNodeWithText(context.getString(com.omnidroid.R.string.continue_playing))
                     .assertIsDisplayed()
             }
@@ -170,7 +171,7 @@ class LibraryCapacityTest {
             }
             // Grid/list exercise sparse paging jumps including the final database row.
             // Console uses its real gesture navigation, then searches for the final row below.
-            if (layout != HomeView.CAROUSEL) {
+            if (layout != LibraryLayout.CONSOLE) {
                 listOf(count / 4, count / 2, count * 3 / 4, count - 1, count / 2, 0).distinct().forEach { index ->
                     val position = index + if (featured) 1 else 0
                     scrollTo(position)
@@ -180,7 +181,7 @@ class LibraryCapacityTest {
             }
             repeat(swipes) {
                 compose.onRoot().performTouchInput {
-                    if (layout == HomeView.CAROUSEL || (layout == HomeView.GRID && landscape)) swipeLeft()
+                    if (layout == LibraryLayout.CONSOLE || (layout == LibraryLayout.GRID && landscape)) swipeLeft()
                     else swipeUp()
                 }
                 compose.waitForIdle()
@@ -192,8 +193,8 @@ class LibraryCapacityTest {
             compose.runOnUiThread { viewModel.clearSearchQuery() }
             // Lazy lists may retain their previous position when search is cleared.
             // Explicitly navigate back instead of treating that valid behavior as a failure.
-            if (layout != HomeView.CAROUSEL) scrollTo(0)
-            awaitTitle(1, if (layout == HomeView.CAROUSEL) null else 0)
+            if (layout != LibraryLayout.CONSOLE) scrollTo(0)
+            awaitTitle(1, if (layout == LibraryLayout.CONSOLE) null else 0)
             // Leave enough real time for image decoding, prefetch work and delayed exceptions.
             SystemClock.sleep(2000)
             compose.waitForIdle()
@@ -210,7 +211,8 @@ class LibraryCapacityTest {
             db.close()
             context.deleteDatabase(dbName)
             preferences.edit().apply {
-                layoutKeys.zip(oldLayouts).forEach { (key, old) -> if (old == null) remove(key) else putString(key, old) }
+                if (oldLayout == null) remove(layoutKey) else putString(layoutKey, oldLayout)
+                if (oldPortraitLayout == null) remove(portraitLayoutKey) else putString(portraitLayoutKey, oldPortraitLayout)
                 if (hadZoom) putInt(zoomKey, oldZoom) else remove(zoomKey)
                 if (oldSort == null) remove(sortKey) else putString(sortKey, oldSort)
             }.commit()

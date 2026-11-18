@@ -629,7 +629,7 @@ private fun LibraryGames(
     // and List, which drops the focused cell). The dock never holds focus, so this can't pull a
     // controller out of it. If the first cell isn't laid out yet, try again a frame later.
     val hasContent = games.itemCount > 0 || showContinue
-    LaunchedEffect(requestInitialFocus, hasContent, state.homeView, state.filter) {
+    LaunchedEffect(requestInitialFocus, hasContent, state.layout, state.filter) {
         if (requestInitialFocus && hasContent) {
             if (!runCatching { firstItemRequester.requestFocus() }.getOrDefault(false)) {
                 withFrameNanos { }
@@ -657,7 +657,7 @@ private fun LibraryGames(
                     .weight(1f)
                     .fillMaxWidth()
                     .libraryPinchZoom(
-                        enabled = state.homeView == HomeView.GRID,
+                        enabled = state.layout == LibraryLayout.GRID,
                         density = { currentZoomDensity },
                         onDensityChange = { currentOnZoomDensityChange(it) },
                         liveScale = pinchScale,
@@ -694,7 +694,7 @@ private fun LibraryGames(
                                 },
                     ) {
                         val featured = continueGame.takeIf { showContinue }
-                        if (state.homeView == HomeView.CAROUSEL) {
+                        if (state.layout == LibraryLayout.CONSOLE) {
                             // The carousel sits between the top bar and the console dock, clear of a cutout.
                             val carouselActionFocus = remember(firstItemRequester, homeActionsRequester) {
                                 CarouselActionFocus(homeActionsRequester, firstItemRequester)
@@ -723,7 +723,7 @@ private fun LibraryGames(
                                 LibraryPagedContent(
                                     games = games,
                                     featured = featured,
-                                    list = state.homeView == HomeView.LIST,
+                                    layout = state.layout,
                                     zoomDensity = state.zoomDensity,
                                     portrait = portrait,
                                     sharedTransitionScope = sharedTransitionScope,

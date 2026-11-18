@@ -308,46 +308,46 @@ internal fun Modifier.homeSelectionRing(
     )
 
 /**
- * The view control for the top bar: the three-way switch when it fits beside search in [room],
- * else one button that steps through the views (portrait, narrow 4:3 screens).
+ * The layout control for the top bar: the three-way switch when it fits beside search in [room],
+ * else one button that steps through the layouts (portrait, narrow 4:3 screens).
  */
 @Composable
-internal fun HomeViewControl(
-    view: HomeView,
-    onViewChange: (HomeView) -> Unit,
+internal fun LibraryLayoutControl(
+    layout: LibraryLayout,
+    onLayoutChange: (LibraryLayout) -> Unit,
     portrait: Boolean,
     room: Dp,
 ) {
-    if (portrait || room < homeViewSwitchWidth()) {
-        HomeViewCycleButton(view = view, onViewChange = onViewChange)
+    if (portrait || room < libraryLayoutSwitchWidth()) {
+        LibraryLayoutCycleButton(layout = layout, onLayoutChange = onLayoutChange)
     } else {
-        HomeViewSwitch(view = view, onViewChange = onViewChange)
+        LibraryLayoutSwitch(layout = layout, onLayoutChange = onLayoutChange)
     }
 }
 
-/** Width of [HomeViewSwitch]: three segments plus its inset and gaps. */
+/** Width of [LibraryLayoutSwitch]: three segments plus its inset and gaps. */
 @Composable
-internal fun homeViewSwitchWidth(): Dp =
+internal fun libraryLayoutSwitchWidth(): Dp =
     // Three square segments, the inset either side, and the 2 dp gaps between segments.
-    chromeButtonSize() * (HomeView.entries.size + 2 * HomeViewSwitchInset) + 2.dp * (HomeView.entries.size - 1)
+    chromeButtonSize() * (LibraryLayout.entries.size + 2 * LayoutSwitchInset) + 2.dp * (LibraryLayout.entries.size - 1)
 
-/** [HomeViewSwitch]'s inset around its segments, as a fraction of its height. */
-private const val HomeViewSwitchInset = 0.1f
+/** [LibraryLayoutSwitch]'s inset around its segments, as a fraction of its height. */
+private const val LayoutSwitchInset = 0.1f
 
-/** Home's Carousel / Grid / List switch, sized to sit in the top bar beside search. */
+/** The Console / Grid / List switch, sized to sit in the top bar beside search. */
 @Composable
-internal fun HomeViewSwitch(
-    view: HomeView,
-    onViewChange: (HomeView) -> Unit,
+internal fun LibraryLayoutSwitch(
+    layout: LibraryLayout,
+    onLayoutChange: (LibraryLayout) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     // Same height as the other top bar controls; segments in the wireframe's 44 : 36 proportion.
     val height = chromeButtonSize()
-    val inset = height * HomeViewSwitchInset
+    val inset = height * LayoutSwitchInset
     SegmentedPills(
-        options = HomeView.entries,
-        selected = view,
-        onSelect = onViewChange,
+        options = LibraryLayout.entries,
+        selected = layout,
+        onSelect = onLayoutChange,
         modifier = modifier.height(height),
         segmentHeight = height - inset * 2,
         segmentWidth = height,
@@ -359,43 +359,43 @@ internal fun HomeViewSwitch(
             imageVector = option.icon(),
             contentDescription = stringResource(option.labelRes()),
             modifier = Modifier.size(chromeIconSize()),
-            tint = if (option == view) colors.content else chromeColors.muted,
+            tint = if (option == layout) colors.content else chromeColors.muted,
         )
     }
 }
 
 /**
- * One round button showing the current Home view; each press moves to the next. Used in the
+ * One round button showing the current layout; each press moves to the next. Used in the
  * portrait top bar, where the three-way switch does not fit beside search and the other buttons.
  */
 @Composable
-internal fun HomeViewCycleButton(
-    view: HomeView,
-    onViewChange: (HomeView) -> Unit,
+internal fun LibraryLayoutCycleButton(
+    layout: LibraryLayout,
+    onLayoutChange: (LibraryLayout) -> Unit,
 ) {
-    val next = HomeView.entries[(view.ordinal + 1) % HomeView.entries.size]
-    FloatingChromeButton(onClick = { onViewChange(next) }) {
+    val next = LibraryLayout.entries[(layout.ordinal + 1) % LibraryLayout.entries.size]
+    FloatingChromeButton(onClick = { onLayoutChange(next) }) {
         Icon(
-            imageVector = view.icon(),
-            contentDescription = stringResource(R.string.home_view_switch, stringResource(view.labelRes())),
+            imageVector = layout.icon(),
+            contentDescription = stringResource(R.string.home_view_switch, stringResource(layout.labelRes())),
             modifier = Modifier.size(chromeIconSize()),
             tint = accentColor,
         )
     }
 }
 
-private fun HomeView.icon() =
+private fun LibraryLayout.icon() =
     when (this) {
-        HomeView.CAROUSEL -> WireframeIcons.ViewCarousel
-        HomeView.GRID -> WireframeIcons.ViewGrid
-        HomeView.LIST -> WireframeIcons.ViewList
+        LibraryLayout.CONSOLE -> WireframeIcons.ViewConsole
+        LibraryLayout.GRID -> WireframeIcons.ViewGrid
+        LibraryLayout.LIST -> WireframeIcons.ViewList
     }
 
-private fun HomeView.labelRes() =
+private fun LibraryLayout.labelRes() =
     when (this) {
-        HomeView.CAROUSEL -> R.string.library_view_carousel
-        HomeView.GRID -> R.string.library_view_grid
-        HomeView.LIST -> R.string.library_view_list
+        LibraryLayout.CONSOLE -> R.string.library_view_console
+        LibraryLayout.GRID -> R.string.library_view_grid
+        LibraryLayout.LIST -> R.string.library_view_list
     }
 
 /** Console and title over the bottom of a side card, on a dark gradient (light text in both themes). */

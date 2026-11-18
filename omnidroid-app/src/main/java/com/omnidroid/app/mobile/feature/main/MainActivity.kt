@@ -72,8 +72,8 @@ import com.omnidroid.app.mobile.feature.displays.DisplaysDialog
 import com.omnidroid.app.mobile.feature.gamedetails.GameDetailsScreen
 import com.omnidroid.app.mobile.feature.gamedetails.GameDetailsViewModel
 import com.omnidroid.app.mobile.feature.library.LibraryFilter
-import com.omnidroid.app.mobile.feature.library.HomeView
-import com.omnidroid.app.mobile.feature.library.HomeViewControl
+import com.omnidroid.app.mobile.feature.library.LibraryLayout
+import com.omnidroid.app.mobile.feature.library.LibraryLayoutControl
 import com.omnidroid.app.mobile.feature.library.LibraryScreen
 import com.omnidroid.app.mobile.feature.library.LibraryStartupStore
 import com.omnidroid.app.mobile.feature.library.LibraryTopBar
@@ -381,7 +381,7 @@ class MainActivity : RetrogradeComponentActivity(), BusyActivity {
                     .value
                     .any { it.getOmnidroidInputDevice() is OmnidroidInputDeviceGamePad }
 
-            val isGrid = libraryState.homeView == HomeView.GRID
+            val isGrid = libraryState.layout == LibraryLayout.GRID
             val libraryHints =
                 ControllerHints.library(
                     switchConsoles = stringResource(R.string.controller_hint_switch_consoles),
@@ -415,7 +415,7 @@ class MainActivity : RetrogradeComponentActivity(), BusyActivity {
                     back = stringResource(R.string.controller_hint_back),
                 )
 
-            LaunchedEffect(currentRoute, selectedGameState.value, libraryState.homeView) {
+            LaunchedEffect(currentRoute, selectedGameState.value, libraryState.layout) {
                 controllerNav.setHints(
                     when {
                         selectedGameState.value != null -> simpleHints
@@ -886,9 +886,9 @@ class MainActivity : RetrogradeComponentActivity(), BusyActivity {
                     afterSearch =
                         if (currentRoute == MainRoute.HOME) {
                             { room ->
-                                HomeViewControl(
-                                    view = libraryState.homeView,
-                                    onViewChange = { libraryViewModel.setHomeView(it) },
+                                LibraryLayoutControl(
+                                    layout = libraryState.layout,
+                                    onLayoutChange = { libraryViewModel.setLayout(it) },
                                     portrait = portrait,
                                     room = room,
                                 )

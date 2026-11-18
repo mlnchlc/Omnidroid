@@ -619,14 +619,14 @@
     <string name="controller_hint_zoom">Zoom</string>
     <string name="library_view_grid">Grid view</string>
     <string name="library_view_list">List view</string>
-    <string name="library_view_carousel">Carousel view</string>
+    <string name="library_view_console">Console view</string>
     <string name="home_all_games">All games</string>
-    <!-- Portrait Home top bar button; %1$s is the current view, e.g. "Carousel view" -->
+    <!-- Portrait Home top bar button; %1$s is the current view, e.g. "Console view" -->
     <string name="home_view_switch">%1$s, change view</string>
     <string name="settings_section_home">Home</string>
     <string name="library_layout_grid_short">Grid</string>
     <string name="library_layout_list_short">List</string>
-    <string name="library_layout_carousel_short">Carousel</string>
+    <string name="library_layout_console_short">Console</string>
     <string name="settings_title_home_view_landscape">Home view in landscape</string>
     <string name="settings_title_home_view_portrait">Home view in portrait</string>
     <string name="settings_description_home_view">Each orientation remembers its own view; the Home top bar changes the one on screen</string>

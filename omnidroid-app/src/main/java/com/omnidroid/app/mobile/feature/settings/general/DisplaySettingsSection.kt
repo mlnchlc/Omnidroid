@@ -18,8 +18,7 @@ import com.omnidroid.app.mobile.feature.main.navigateToRoute
 import com.omnidroid.app.shared.settings.rememberHdModeAllowed
 import com.omnidroid.app.utils.android.settings.OmnidroidSettingsGroup
 import com.omnidroid.app.utils.android.settings.OmnidroidSettingsList
-import com.omnidroid.app.mobile.feature.library.HomeView
-import com.omnidroid.app.mobile.feature.library.HomeViewPrefs
+import com.omnidroid.app.mobile.feature.library.LibraryLayout
 import com.omnidroid.app.mobile.feature.library.LibraryViewModel
 import com.omnidroid.app.utils.android.settings.OmnidroidSettingsMenuLink
 import com.omnidroid.app.utils.android.settings.OmnidroidSettingsSegmented
@@ -94,7 +93,7 @@ internal fun DisplaySettings(navController: NavController) {
     SettingsHorizontalDivider()
     val viewNames =
         listOf(
-            stringResource(R.string.library_layout_carousel_short),
+            stringResource(R.string.library_layout_console_short),
             stringResource(R.string.library_layout_grid_short),
             stringResource(R.string.library_layout_list_short),
         )
@@ -103,9 +102,9 @@ internal fun DisplaySettings(navController: NavController) {
         OmnidroidSettingsSegmented(
             state =
                 indexPreferenceState(
-                    HomeViewPrefs.LANDSCAPE_KEY,
-                    HomeView.CAROUSEL.name,
-                    HomeView.entries.map { it.name },
+                    LibraryViewModel.LAYOUT_KEY,
+                    LibraryLayout.CONSOLE.name,
+                    LibraryLayout.entries.map { it.name },
                 ),
             titleRes = R.string.settings_title_home_view_landscape,
             subtitleRes = R.string.settings_description_home_view,
@@ -114,9 +113,9 @@ internal fun DisplaySettings(navController: NavController) {
         OmnidroidSettingsSegmented(
             state =
                 indexPreferenceState(
-                    HomeViewPrefs.PORTRAIT_KEY,
-                    HomeView.CAROUSEL.name,
-                    HomeView.entries.map { it.name },
+                    LibraryViewModel.PORTRAIT_LAYOUT_KEY,
+                    LibraryLayout.CONSOLE.name,
+                    LibraryLayout.entries.map { it.name },
                 ),
             titleRes = R.string.settings_title_home_view_portrait,
             items = viewNames,
