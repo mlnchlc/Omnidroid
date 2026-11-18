@@ -755,6 +755,14 @@ android {
 
 
             resValue("string", "omnidroid_name", "Omnidroid")
+            // -Pomnidroid.personal (dev only): a release build installed beside the store app as
+            // com.omnidroid.personal, signed with the debug key since the release key is not here.
+            if (project.hasProperty("omnidroid.personal")) {
+                applicationIdSuffix = ".personal"
+                versionNameSuffix = "-PERSONAL"
+                resValue("string", "omnidroid_name", "Omnidroid Personal")
+                signingConfig = signingConfigs["debug"]
+            }
 
 
 
@@ -775,6 +783,9 @@ android {
 
 
             resValue("string", "omnidroid_name", "OmnidroidDebug")
+            // -Pomnidroid.fastDebug: same app id and data, but without the debuggable flag, which
+            // slows Compose a lot (useful for judging scroll smoothness against release).
+            if (project.hasProperty("omnidroid.fastDebug")) isDebuggable = false
 
 
 

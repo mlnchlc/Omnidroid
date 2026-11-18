@@ -22,6 +22,12 @@ Android emulator frontend (Kotlin + Compose), a heavily extended Lemuroid fork. 
 - Builds for the phone: add `-Pomnidroid.fastDebug` (drops the debuggable flag). A debuggable build
   runs Compose far slower: library flings measured 19 slow UI frames / 24 ms p99 vs 0 / 9 ms without
   the flag, identical to the release app. Judge smoothness only on a fastDebug build.
+  The flag and `-Pomnidroid.personal` live only in a dev-only commit in `omnidroid-app/build.gradle.kts`
+  (never upstream). When rebuilding `dev` from master, carry that commit over with CLAUDE.md, or the
+  flag is silently ignored and the phone gets a slow debuggable build (check `dumpsys package` flags).
+- Personal build (release, minified, not debuggable), installed beside the store app and the debug app:
+  `./gradlew assembleFreeDynamicRelease -Pomnidroid.personal` installs as `com.omnidroid.personal`,
+  "Omnidroid Personal", signed with the debug key. Separate app, separate data.
 - Build speed: Gradle build cache + configuration cache are on, so incremental builds take ~10-30 s
   even across branch switches; run one Gradle invocation per check (tests + assemble together) and
   filter tests with `--tests`. Don't use `-Pandroid.injected.build.abi=…`: it produces a test-only
