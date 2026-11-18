@@ -1,11 +1,11 @@
 package com.omnidroid.app.mobile.feature.settings.general
 
-import androidx.compose.material3.MaterialTheme
-import com.omnidroid.app.shared.settings.HDModeQuality
 import com.omnidroid.app.utils.android.settings.stringPreferenceState
 import com.omnidroid.app.utils.android.settings.OmnidroidSettingsColorChoice
 import com.omnidroid.app.mobile.shared.compose.ui.LocalAppDarkTheme
 import com.omnidroid.app.mobile.shared.compose.ui.AccentPreset
+import androidx.compose.material3.MaterialTheme
+import com.omnidroid.app.shared.settings.HDModeQuality
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable

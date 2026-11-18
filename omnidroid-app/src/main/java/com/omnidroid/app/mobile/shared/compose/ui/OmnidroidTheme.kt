@@ -110,9 +110,6 @@ private val DarkColorScheme =
 
 val LibraryNeonGreen = Color(0xFF00B33C)
 
-/** Text and icons on a [LibraryNeonGreen] fill: near-black reads at ~7:1, white only ~2.8:1. */
-val OnLibraryNeonGreen = Color(0xFF0A0A0A)
-
 /**
  * Highlight colours for the Accent color setting (Display): focus rings, selection rings and
  * selected borders. Each has a darker light-mode variant to keep >= 3:1 against light chrome.
@@ -142,7 +139,10 @@ val accentColor: Color
     @ReadOnlyComposable
     get() = LocalAccentColor.current
 
-/** Accent for icons/text on chrome backgrounds (selected states); follows the accent setting. */
+/** Text and icons on a [LibraryNeonGreen] fill: near-black reads at ~7:1, white only ~2.8:1. */
+val OnLibraryNeonGreen = Color(0xFF0A0A0A)
+
+/** Same as [accentColor]; kept for call sites from before the accent setting. */
 val libraryAccentColor: Color
     @Composable
     @ReadOnlyComposable

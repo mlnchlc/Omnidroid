@@ -114,6 +114,7 @@ import com.omnidroid.app.mobile.shared.compose.ui.chromeIconSize
 import com.omnidroid.app.mobile.shared.compose.ui.chromeItemGap
 import com.omnidroid.app.mobile.shared.compose.ui.chromeTextStyle
 import com.omnidroid.app.mobile.shared.compose.ui.WireframeIcons
+import com.omnidroid.app.mobile.shared.compose.ui.accentColor
 import com.omnidroid.app.mobile.shared.compose.ui.LocalAdaptiveLayout
 import com.omnidroid.app.mobile.shared.compose.ui.chromeColors
 import com.omnidroid.app.mobile.shared.controller.LocalControllerNavigation
@@ -406,7 +407,7 @@ private fun ProfileChromeButton(
         Icon(
             painter = painterResource(R.drawable.ic_profile_robot),
             contentDescription = stringResource(R.string.title_profile),
-            tint = libraryAccentColor,
+            tint = accentColor,
             // The logo fills most of its button, as in the wireframes.
             modifier = Modifier.size(chromeButtonSize() * 0.72f),
         )
@@ -438,7 +439,7 @@ private fun LibrarySortButton(
         Icon(
             imageVector = Icons.AutoMirrored.Filled.Sort,
             contentDescription = stringResource(R.string.library_sort),
-            tint = if (sort != LibrarySort.TITLE) libraryAccentColor else chromeColors.muted,
+            tint = if (sort != LibrarySort.TITLE) accentColor else chromeColors.muted,
             modifier = Modifier.size(chromeIconSize()),
         )
     }
