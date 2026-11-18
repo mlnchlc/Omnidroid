@@ -1,9 +1,10 @@
 package com.omnidroid.app.mobile.shared.compose.sidemenu
 
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.BoxWithConstraints
 import com.omnidroid.app.mobile.shared.compose.ui.ChromeShapes
 import com.omnidroid.app.utils.android.settings.SettingsRowEnd
 import androidx.annotation.StringRes
@@ -285,26 +286,42 @@ data class MenuTile(
  * The most-used actions as big tiles, easier to hit than list rows, in both the portrait sheet and
  * the side panel. One row when each tile gets at least [MinTileWidth], else two per row (a narrow
  * panel, or a large font). Each tile is a controller focus target like any other row.
+ *
+ * A plain [Layout], not BoxWithConstraints: the tiles must be composed with the rest of the page,
+ * or [SideMenuPage] picks its focus target before they are registered.
  */
 @Composable
 fun SideMenuPageScope.MenuTiles(id: String, tiles: List<MenuTile>) {
     key(id) {
-        BoxWithConstraints(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 12.dp)) {
-            val gap = 8.dp
+        Layout(
+            content = { tiles.forEach { tile -> MenuTileCell(tile, Modifier) } },
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 12.dp),
+        ) { measurables, constraints ->
+            val gap = TileGap.roundToPx()
+            val width = constraints.maxWidth
+            val count = measurables.size
             val perRow =
-                if (tiles.size > 2 && (maxWidth - gap * (tiles.size - 1)) / tiles.size < MinTileWidth) 2 else tiles.size
-            Column(verticalArrangement = Arrangement.spacedBy(gap)) {
-                tiles.chunked(perRow).forEach { row ->
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(gap)) {
-                        row.forEach { tile -> MenuTileCell(tile, Modifier.weight(1f)) }
-                        // Keep a short last row's tiles the same width as the ones above.
-                        repeat(perRow - row.size) { Spacer(Modifier.weight(1f)) }
-                    }
+                if (count > 2 && (width - gap * (count - 1)) / count < MinTileWidth.roundToPx()) 2 else count.coerceAtLeast(1)
+            val cellWidth = ((width - gap * (perRow - 1)) / perRow).coerceAtLeast(0)
+            // Tiles in a row share the tallest one's height, so a two-line label keeps them even.
+            val rows =
+                measurables.chunked(perRow).map { row ->
+                    val height = row.maxOf { it.maxIntrinsicHeight(cellWidth) }
+                    row.map { it.measure(Constraints.fixed(cellWidth, height)) }
+                }
+            val totalHeight = rows.sumOf { row -> row.maxOf { it.height } } + gap * (rows.size - 1).coerceAtLeast(0)
+            layout(width, totalHeight) {
+                var y = 0
+                rows.forEach { row ->
+                    row.forEachIndexed { i, placeable -> placeable.placeRelative(i * (cellWidth + gap), y) }
+                    y += row.maxOf { it.height } + gap
                 }
             }
         }
     }
 }
+
+private val TileGap = 8.dp
 
 private val MinTileWidth = 80.dp
 
