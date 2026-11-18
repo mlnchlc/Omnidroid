@@ -38,6 +38,7 @@ import com.omnidroid.R
 import com.omnidroid.app.mobile.feature.gamemenu.coreoptions.GameMenuCoreOptionsScreen
 import com.omnidroid.app.mobile.feature.gamemenu.coreoptions.GameMenuCoreOptionsViewModel
 import com.omnidroid.app.mobile.feature.gamemenu.states.GameMenuStatesScreen
+import com.omnidroid.app.mobile.feature.gamemenu.states.StatesMenuMode
 import com.omnidroid.app.mobile.feature.gamemenu.states.GameMenuStatesViewModel
 import com.omnidroid.app.mobile.shared.compose.ui.AppTheme
 import com.omnidroid.app.mobile.shared.controller.ControllerHintBar
@@ -198,6 +199,7 @@ class GameMenuActivity : RetrogradeComponentActivity() {
                                                 statesPreviewManager,
                                             ),
                                     ),
+                                    mode = StatesMenuMode.SAVE,
                                     onStateClicked = {
                                         requestClose(InGameMenuCommand.Save(it))
                                     },
@@ -216,6 +218,7 @@ class GameMenuActivity : RetrogradeComponentActivity() {
                                                 statesPreviewManager,
                                             ),
                                     ),
+                                    mode = StatesMenuMode.LOAD,
                                     onStateClicked = {
                                         requestClose(InGameMenuCommand.Load(it))
                                     },
@@ -263,8 +266,8 @@ class GameMenuActivity : RetrogradeComponentActivity() {
     }
 
     override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
-        runCatching { controllerBridge.navigation?.contentFocusRequester?.requestFocus() }
-        if (controllerBridge.dispatchMotion(event) { super.dispatchKeyEvent(it) }) {
+        // No focus grab here: a stick streams motion events and would pull focus back mid-move.
+        if (controllerBridge.dispatchMotion(event, controllerBridge.keyed(this) { super.dispatchKeyEvent(it) })) {
             return true
         }
         return super.dispatchGenericMotionEvent(event)

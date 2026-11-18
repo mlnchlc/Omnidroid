@@ -1,5 +1,6 @@
 package com.omnidroid.app.mobile.feature.library
 
+import com.omnidroid.app.mobile.shared.compose.ui.libraryAccentColor
 import com.omnidroid.app.mobile.shared.compose.ui.accentColor
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.focus.FocusDirection
@@ -19,6 +20,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.focusable
@@ -129,7 +131,6 @@ import com.omnidroid.app.mobile.shared.compose.ui.homeChromeBackground
 import com.omnidroid.app.mobile.shared.compose.ui.isTelevision
 import com.omnidroid.app.mobile.shared.compose.ui.TvSafeMargin
 import com.omnidroid.app.mobile.shared.compose.ui.OmnidroidEmptyView
-import com.omnidroid.app.mobile.shared.compose.ui.LibraryNeonGreen
 import com.omnidroid.app.mobile.shared.compose.ui.LocalAdaptiveLayout
 import com.omnidroid.app.mobile.shared.compose.ui.chromeColors
 import com.omnidroid.app.mobile.shared.compose.ui.hugDisplayCutout
@@ -146,6 +147,7 @@ import com.omnidroid.app.mobile.shared.controller.LocalControllerNavigation
 import com.omnidroid.app.mobile.shared.controller.controllerFocusGlow
 import com.omnidroid.lib.library.GameSystem
 import com.omnidroid.lib.library.MetaSystemID
+import com.omnidroid.lib.preferences.SharedPreferencesHelper
 import com.omnidroid.lib.library.db.entity.Game
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
@@ -295,6 +297,7 @@ fun LibraryScreen(
                     onGameLongClick = onGameLongClick,
                     onFavoriteToggle = onFavoriteToggle,
                     onSync = { viewModel.syncLibrary(it) },
+                    onClearSearch = { viewModel.clearSearchQuery() },
                     onZoomDensityChange = { viewModel.setZoomDensity(it) },
                     onLayoutChange = { viewModel.setLayout(it) },
                     onBackdropGameChange = { backdropGame = it },
@@ -346,6 +349,7 @@ fun LibraryScreen(
                     onGameLongClick = onGameLongClick,
                     onFavoriteToggle = onFavoriteToggle,
                     onSync = { viewModel.syncLibrary(it) },
+                    onClearSearch = { viewModel.clearSearchQuery() },
                     onZoomDensityChange = { viewModel.setZoomDensity(it) },
                     onLayoutChange = { viewModel.setLayout(it) },
                     onBackdropGameChange = { backdropGame = it },
@@ -396,6 +400,7 @@ fun LibraryScreen(
                     onGameLongClick = onGameLongClick,
                     onFavoriteToggle = onFavoriteToggle,
                     onSync = { viewModel.syncLibrary(it) },
+                    onClearSearch = { viewModel.clearSearchQuery() },
                     onZoomDensityChange = { viewModel.setZoomDensity(it) },
                     onLayoutChange = { viewModel.setLayout(it) },
                     onBackdropGameChange = { backdropGame = it },
@@ -543,6 +548,8 @@ internal fun SidebarIconButton(
 ) {
     val adaptiveSpec = LocalAdaptiveLayout.current
     Surface(
+        // The selectable Surface tells screen readers which console or filter is showing.
+        selected = selected,
         onClick = onClick,
         modifier = Modifier.size(adaptiveSpec.sidebarButtonSize).controllerFocusGlow(CircleShape),
         shape = CircleShape,
@@ -928,6 +935,7 @@ private fun LibraryGames(
     onGameLongClick: (Game) -> Unit,
     onFavoriteToggle: (Game, Boolean) -> Unit,
     onSync: (Context) -> Unit,
+    onClearSearch: () -> Unit,
     onZoomDensityChange: (Int) -> Unit,
     onLayoutChange: (LibraryLayout) -> Unit,
     onBackdropGameChange: (Game?) -> Unit,
@@ -959,10 +967,13 @@ private fun LibraryGames(
     }
     val isRefreshing = games.loadState.refresh is LoadState.Loading
     val isEmpty = games.itemCount == 0 && !showContinue && !isRefreshing
-    val showSyncEmpty =
-        isEmpty &&
-            state.searchQuery.isBlank() &&
-            state.filter !is LibraryFilter.Favorites
+    // Re-read after scans so "pick a folder" turns into "no games found" once one is chosen.
+    val hasGamesFolder =
+        remember(state.operationInProgress, isEmpty) {
+            !SharedPreferencesHelper.getLegacySharedPreferences(context)
+                .getString(context.getString(com.omnidroid.lib.R.string.pref_key_extenral_folder), null)
+                .isNullOrBlank()
+        }
     val viewBarVisible = showViewBar && (games.itemCount > 0 || showContinue || portrait)
     val pinchScale = remember { mutableFloatStateOf(1f) }
     val currentZoomDensity by rememberUpdatedState(state.zoomDensity)
@@ -990,15 +1001,16 @@ private fun LibraryGames(
                         CircularProgressIndicator()
                     }
                 }
-                showSyncEmpty -> {
-                    LibrarySyncEmpty(
-                        modifier = Modifier,
-                        scanning = state.operationInProgress,
-                        onSync = { StorageFrameworkPickerLauncher.pickFolder(context) },
-                    )
-                }
                 isEmpty -> {
-                    OmnidroidEmptyView(modifier = Modifier)
+                    LibraryEmptyState(
+                        kind = libraryEmptyKind(hasGamesFolder, state.filter, state.searchQuery),
+                        filter = state.filter,
+                        searchQuery = state.searchQuery,
+                        scanning = state.operationInProgress,
+                        onPickFolder = { StorageFrameworkPickerLauncher.pickFolder(context) },
+                        onRescan = { onSync(context) },
+                        onClearSearch = onClearSearch,
+                    )
                 }
                 else -> {
                     Box(
@@ -1335,7 +1347,8 @@ private fun LayoutToggleIcon(
                     color = if (selected) chromeColors.panelSelected else Color.Transparent,
                     shape = CircleShape,
                 )
-                .clickable(onClick = onClick),
+                // One of console / grid / list: announced as tabs with the current one selected.
+                .selectable(selected = selected, onClick = onClick, role = Role.Tab),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
@@ -1434,7 +1447,7 @@ private fun ZoomTrack(
     onPositionChange: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val thumbColor = LibraryNeonGreen
+    val thumbColor = libraryAccentColor
     val trackColor = chromeColors.muted.copy(alpha = 0.45f)
     Box(
         modifier =

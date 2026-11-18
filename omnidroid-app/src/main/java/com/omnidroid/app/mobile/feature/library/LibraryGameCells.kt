@@ -1,5 +1,6 @@
 package com.omnidroid.app.mobile.feature.library
 
+import com.omnidroid.app.mobile.shared.compose.ui.OnLibraryNeonGreen
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.EnterExitState
 import androidx.compose.animation.ExperimentalSharedTransitionApi
@@ -124,6 +125,7 @@ internal fun LibraryGameRow(
                 .combinedClickable(
                     onClick = onClick,
                     onLongClick = onLongClick,
+                    onLongClickLabel = stringResource(R.string.game_card_options_label),
                 ),
         shape = shape,
         color = chromeColors.listRow,
@@ -149,6 +151,8 @@ internal fun LibraryGameRow(
                 game = game,
                 aspectRatio = null,
                 decodeWidth = thumbWidth,
+                // The row's title text already names the game.
+                contentDescription = null,
             )
             Column(
                 modifier =

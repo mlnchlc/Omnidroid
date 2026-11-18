@@ -63,6 +63,19 @@
     <string name="consoles_emulator_unavailable">No emulator available for this system.</string>
     <string name="consoles_install_console">Install</string>
     <string name="library_pick_games_folder">Pick a games folder</string>
+    <string name="library_empty_no_folder_title">Choose where your games are</string>
+    <string name="library_empty_no_folder_body">Pick the folder that holds your ROMs. Subfolders are scanned too.</string>
+    <string name="library_empty_no_games_title">No games found</string>
+    <string name="library_empty_no_console_games_title">No %1$s games found</string>
+    <string name="library_empty_no_games_body">Make sure your games are in the chosen folder. Compressed or unrecognized files may need to be unzipped or sorted into one subfolder per console.</string>
+    <string name="library_empty_no_favorites_title">No favorites yet</string>
+    <string name="library_empty_no_favorites_body">Long-press a game, or use its heart button, to add it here.</string>
+    <string name="library_empty_no_results_title">Nothing matches “%1$s”</string>
+    <string name="library_empty_no_results_body">Search only looks in the console or list you have selected.</string>
+    <string name="library_empty_rescan">Rescan</string>
+    <string name="library_empty_change_folder">Change folder</string>
+    <string name="library_empty_folder_help">How to organize games</string>
+    <string name="library_empty_clear_search">Clear search</string>
     <string name="consoles_emulator_auto">Add games from the library to set this up automatically.</string>
     <string name="consoles_emulator_pending">Installs automatically when you start a game.</string>
     <string name="consoles_assets_section">Support files</string>
@@ -131,6 +144,8 @@
     <string name="game_unavailable">This game is unavailable. Reconnect the folder or remove it from the library.</string>
     <string name="game_unavailable_badge">Unavailable</string>
     <string name="settings_title_clear_missing_games">Clear missing games</string>
+    <string name="settings_clear_missing_games_confirm">Clear</string>
+    <string name="settings_unavailable_while_indexing">Unavailable while the library is being scanned</string>
     <string name="settings_description_clear_missing_games">Permanently remove games whose files are no longer in the library folder.</string>
     <string name="settings_title_periodic_library_scan">Periodic library check</string>
     <string name="settings_description_periodic_library_scan">When charging and idle, occasionally rescan the games folder in the background. Off by default.</string>
@@ -195,6 +210,8 @@
     <string name="url_developer_github" translatable="false">https://github.com/Ahmed-Abousaif</string>
     <string name="settings_title_enable_autosave">Autosave state</string>
     <string name="settings_description_enable_autosave">Save state when exiting or backgrounding a game, and resume it on launch</string>
+    <string name="settings_title_confirm_game_menu_actions">Confirm before losing progress</string>
+    <string name="settings_description_confirm_game_menu_actions">Ask before restarting, loading a state or overwriting a save from the in-game menu</string>
     <string name="settings_title_enable_touch_feedback">Vibrate on touch</string>
     <string name="settings_title_tilt_sensitivity">Tilt sensor sensitivity</string>
     <string name="settings_title_hd_quality">HD mode quality</string>
@@ -204,6 +221,9 @@
     <string name="settings_description_hd_mode">Apply post-processing upscaling filter</string>
     <string name="settings_description_hd_mode_battery">HD mode is unavailable below 15% battery</string>
     <string name="settings_description_hd_quality">Adjust the quality of HD mode</string>
+    <string name="settings_hd_quality_low">Low</string>
+    <string name="settings_hd_quality_medium">Medium</string>
+    <string name="settings_hd_quality_high">High</string>
 
     <string name="settings_title_immersive_mode">Dynamic background</string>
     <string name="settings_description_immersive_mode">Colors the background from the game\'s visuals in game, in the game menu and on the Home view</string>
@@ -239,6 +259,14 @@
     <string name="settings_gamepad_category_enabled">Enabled devices</string>
     <string name="settings_gamepad_category_general">General</string>
     <string name="settings_gamepad_title_reset_bindings">Reset bindings</string>
+    <string name="settings_gamepad_description_reset_bindings">Restore default buttons and shortcuts for every controller</string>
+    <string name="settings_gamepad_title_reset_device">Reset this controller</string>
+    <string name="settings_gamepad_reset_confirm_title">Reset bindings?</string>
+    <string name="settings_gamepad_reset_confirm_button">Reset</string>
+    <string name="settings_gamepad_reset_all_message">All controllers go back to their default buttons and shortcuts.</string>
+    <string name="settings_gamepad_reset_device_message">\"%1$s\" goes back to its default buttons and shortcuts.</string>
+    <string name="settings_gamepad_none_title">No controller connected</string>
+    <string name="settings_gamepad_none_description">Connect a controller to set its buttons and shortcuts</string>
 
     <string name="settings_title_open_cores_selection">Change Cores</string>
     <string name="settings_description_open_cores_selection">Select which core is associated to a system</string>
@@ -247,6 +275,7 @@
     <string name="settings_description_graphics_api_selection">Choose OpenGL or Vulkan rendering backend per system</string>
     <string name="settings_graphics_api_vulkan_available">Vulkan %1$s is supported by your device. Vulkan provides high-performance rendering with reduced CPU overhead and shader compilation stutter.</string>
     <string name="settings_graphics_api_vulkan_unavailable">Vulkan is not supported on this device. Cores will default to OpenGL ES.</string>
+    <string name="settings_graphics_api_only_option">%1$s (only option available)</string>
 
     <string name="settings_title_display_bios_info">BIOS &amp; system files</string>
     <string name="settings_description_display_bios_info">PS2 BIOS, Switch keys/firmware, and other system files</string>
@@ -344,7 +373,9 @@
     <string name="settings_startup_dialog_body">Omnidroid will open straight into the %1$s library every time it starts.</string>
 
     <string name="reset_settings_warning_message_title">Are you sure?</string>
-    <string name="reset_settings_warning_message_description">This will reset Omnidroid to its factory settings. Saves and States will be preserved.</string>
+    <string name="reset_settings_warning_message_description">All settings go back to their defaults: your games folder, controller buttons and shortcuts, per-console options and display settings. Downloaded emulator cores are deleted and downloaded again when needed. Saves and save states are kept.</string>
+    <string name="reset_settings_confirm">Reset</string>
+    <string name="reset_settings_done">Settings reset</string>
 
     <string name="settings_title_save_sync">Cloud saves</string>
     <string name="settings_description_save_sync">Back up and Sync your saves on the cloud</string>
@@ -420,9 +451,11 @@
     <string name="game_context_menu_remove_name">Remove custom name</string>
     <string name="game_custom_name_hint">Custom name</string>
     <string name="game_context_menu_search_cover">Fix match / Search box art</string>
+    <string name="game_card_options_label">Game options</string>
     <string name="game_search_cover_title">Fix Match / Search Box Art</string>
     <string name="game_search_cover_hint">Search Libretro database...</string>
     <string name="game_search_cover_no_results">No matching covers found</string>
+    <string name="game_search_cover_failed">Couldn\'t search for covers. Check your connection and try again.</string>
     <string name="game_match_dialog_title">Apply Game Match</string>
     <string name="game_match_dialog_prompt">Do you want to update both the game title and cover, or the cover only?</string>
     <string name="game_match_apply_both">Title &amp; Cover</string>
@@ -440,6 +473,15 @@
     <string name="game_menu_quit">Quit</string>
     <string name="game_menu_settings">Settings</string>
     <string name="game_menu_state">State %1$s</string>
+    <string name="game_menu_state_empty">Empty slot</string>
+    <string name="game_menu_overwrite">Overwrite</string>
+    <string name="game_menu_confirm_progress_loss">Progress since your last save will be lost.</string>
+    <string name="game_menu_restart_confirm_title">Restart game?</string>
+    <string name="game_menu_load_confirm_title">Load %1$s?</string>
+    <string name="game_menu_save_overwrite_title">Overwrite %1$s?</string>
+    <string name="game_menu_save_overwrite_message">The save from %1$s will be replaced.</string>
+    <string name="core_settings_scope">Applies to all %1$s games</string>
+    <string name="core_option_current_value">Current: %1$s</string>
     <string name="game_menu_change_disk_button">Change Disk</string>
     <string name="game_menu_edit_touch_controls">Edit Controls</string>
     <string name="game_menu_mute_audio">Mute</string>
@@ -510,7 +552,13 @@
     <string name="gamepad_binding_update_title">Associate \"RetroPad %1$s\"</string>
     <string name="gamepad_binding_update_description">Press a button on your \"%1$s\"</string>
     <string name="shortcut_binding_update_title">Associate \"Shortcut %1$s\"</string>
-    <string name="shortcut_binding_update_description">Press the first, then second button to bind a combo on your \"%1$s\"</string>
+    <string name="shortcut_binding_update_description">Press a button on your \"%1$s\", or two buttons one after the other for a combo (hold them together in game)</string>
+    <string name="shortcut_binding_conflict_message">%1$s is already the %2$s shortcut. Replace it?</string>
+    <string name="gamepad_binding_clear">Clear</string>
+    <string name="gamepad_binding_conflict_title">%1$s is already in use</string>
+    <string name="gamepad_binding_conflict_message">%1$s is assigned to %2$s. Swap the two buttons, or replace and leave %2$s unassigned?</string>
+    <string name="gamepad_binding_conflict_swap">Swap</string>
+    <string name="gamepad_binding_conflict_replace">Replace</string>
 
     <string name="tv_game_message_missing_gamepad">Gamepads are required to play. Please connect one.</string>
 

@@ -1,11 +1,14 @@
 package com.omnidroid.app.mobile.feature.library
 
+import com.omnidroid.app.mobile.shared.compose.ui.libraryAccentColor
+import com.omnidroid.app.mobile.shared.compose.ui.OnLibraryNeonGreen
 import androidx.compose.runtime.SideEffect
 import com.omnidroid.app.mobile.shared.compose.ui.accentColor
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.EnterExitState
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animate
@@ -131,6 +134,7 @@ import com.omnidroid.app.mobile.shared.compose.ui.gameCoverSharedBounds
 import com.omnidroid.app.mobile.shared.controller.LocalControllerNavigation
 import com.omnidroid.app.utils.games.GameUtils
 import com.omnidroid.app.shared.covers.backdropRequest
+import com.omnidroid.app.shared.library.GameStatsCache
 import coil.compose.AsyncImage
 import com.omnidroid.lib.library.GameSystem
 import com.omnidroid.lib.library.db.dao.GamePlayStats
@@ -293,13 +297,16 @@ internal fun ConsoleLibrary(
     val scope = rememberCoroutineScope()
     val selectedIndex by remember(state) { derivedStateOf { state.selectedIndex } }
     val selectedGame = items.gameAt(selectedIndex)
-    val pulse =
-        rememberInfiniteTransition(label = "consoleGlow").animateFloat(
-            initialValue = 0.8f,
-            targetValue = 1f,
-            animationSpec = infiniteRepeatable(tween(2400, easing = FastOutSlowInEasing), RepeatMode.Reverse),
-            label = "consoleGlowPulse",
-        )
+    // Pulse the selection glow a few times after the selection changes, then settle, instead of
+    // redrawing the glow every frame forever on an idle screen.
+    val pulseAnim = remember { Animatable(1f) }
+    LaunchedEffect(selectedIndex) {
+        repeat(GLOW_PULSES) {
+            pulseAnim.animateTo(0.8f, tween(2400, easing = FastOutSlowInEasing))
+            pulseAnim.animateTo(1f, tween(2400, easing = FastOutSlowInEasing))
+        }
+    }
+    val pulse = pulseAnim.asState()
 
     val navigation = LocalControllerNavigation.current
     var hasFocus by remember { mutableStateOf(false) }
@@ -647,8 +654,12 @@ private fun ConsoleLandscapeCard(
         if (game == null) return@Box
         OmnidroidGameImage(
             modifier = Modifier.renderAtSize(renderWidth, renderHeight),
+            // The card's banner shows the title.
+            contentDescription = null,
             game = game,
             aspectRatio = null,
+            // Decode at the selected card's size, not the 160dp default (blurry when enlarged).
+            decodeWidth = renderWidth,
         )
         if (home) {
             if (caption) HomeCardCaption(
@@ -829,6 +840,7 @@ private fun ConsolePortraitCarousel(
                         val game = items.gameAt(index)
                         ConsolePortraitCard(
                             game = game,
+                            cardWidth = metrics.cardWidth,
                             focus = {
                                 if (coverTransitioning) 0f else state.focusOf(index)
                             },
@@ -916,6 +928,7 @@ private fun ConsolePortraitCarousel(
 @Composable
 private fun ConsolePortraitCard(
     game: Game?,
+    cardWidth: Dp,
     focus: () -> Float,
     pulse: State<Float>,
     sharedModifier: Modifier,
@@ -958,8 +971,13 @@ private fun ConsolePortraitCard(
         if (game != null) {
             OmnidroidGameImage(
                 modifier = Modifier.fillMaxSize(),
+                // The card's caption shows the title.
+                contentDescription = null,
                 game = game,
                 aspectRatio = null,
+                // Decode at the card's real width (from the carousel's metrics, so no extra
+                // subcomposition per card), not the 160dp default that is blurry on large cards.
+                decodeWidth = cardWidth,
             )
             if (home) {
                 // Home's caption: console, title and the same meta line as the other views.
@@ -1084,13 +1102,11 @@ internal fun ConsoleGameStats(
     horizontalArrangement: Arrangement.Horizontal = Arrangement.spacedBy(10.dp),
 ) {
     val context = LocalContext.current
-    val db = remember(context) { (context.applicationContext as? OmnidroidApplication)?.retrogradeDb }
     val playTimeStore = remember(context) { PlayTimeStore(context) }
     val initialPlayTime = remember(game.id) { playTimeStore.get(game.id) }
-    val stats by remember(game.id, db) {
-        db?.gameSessionDao()?.observeStatsForGame(game.id)
-            ?: flowOf(GamePlayStats(totalDurationMs = initialPlayTime))
-    }.collectAsState(initial = GamePlayStats(totalDurationMs = initialPlayTime))
+    // One shared query for all rows instead of a Room observer per visible row.
+    val allStats by remember(context) { GameStatsCache.observe(context) }.collectAsState()
+    val stats = allStats[game.id] ?: GamePlayStats(totalDurationMs = initialPlayTime)
 
     val totalPlayTimeMs = maxOf(stats.totalDurationMs, initialPlayTime)
     val sessionCount = maxOf(stats.sessionCount, if (totalPlayTimeMs > 0L) 1 else 0)
@@ -1273,7 +1289,11 @@ internal fun ConsoleActions(
         Spacer(modifier = Modifier.width(8.dp))
         ConsoleIconButton(
             imageVector = if (favorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-            contentDescription = stringResource(R.string.favorites),
+            // Toggle: announce what tapping does, not just "Favorites".
+            contentDescription =
+                stringResource(
+                    if (favorite) R.string.game_context_menu_remove_from_favorites else R.string.game_context_menu_add_to_favorites,
+                ),
             tint = if (favorite) accentColor else chromeColors.muted,
             onClick = {
                 game?.let {
@@ -1348,13 +1368,13 @@ private fun ConsoleStartButton(
                     modifier =
                         Modifier
                             .size(20.dp)
-                            .border(1.5.dp, Color.White, CircleShape),
+                            .border(1.5.dp, OnLibraryNeonGreen, CircleShape),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
                         text = "A",
                         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                        color = Color.White,
+                        color = OnLibraryNeonGreen,
                         textAlign = TextAlign.Center,
                     )
                 }
@@ -1363,14 +1383,14 @@ private fun ConsoleStartButton(
                     imageVector = Icons.Filled.PlayArrow,
                     contentDescription = null,
                     modifier = Modifier.size(22.dp),
-                    tint = Color.White,
+                    tint = OnLibraryNeonGreen,
                 )
             }
             Spacer(modifier = Modifier.width(6.dp))
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
-                color = Color.White,
+                color = OnLibraryNeonGreen,
                 maxLines = 1,
             )
         }
@@ -1514,3 +1534,6 @@ private fun consoleCoverSharedBounds(
     }
     return Modifier.gameCoverSharedBounds(sharedTransitionScope, animatedVisibilityScope, game.id, cornerAnim, origin)
 }
+
+/** Glow pulses after a selection change before it settles. */
+private const val GLOW_PULSES = 3
