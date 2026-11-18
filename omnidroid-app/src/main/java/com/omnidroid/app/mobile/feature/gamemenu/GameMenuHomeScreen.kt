@@ -1,5 +1,8 @@
 package com.omnidroid.app.mobile.feature.gamemenu
 
+import com.omnidroid.app.mobile.shared.compose.sidemenu.MenuTiles
+import com.omnidroid.app.mobile.shared.compose.sidemenu.MenuTile
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Sensors
 import androidx.compose.material3.Icon
@@ -31,6 +34,7 @@ fun GameMenuHomeScreen(
     gameMenuRequest: GameMenuRequest,
     onCommand: (InGameMenuCommand) -> Unit,
     saveSyncSupported: Boolean = false,
+    onResume: () -> Unit = {},
 ) {
     val request = gameMenuRequest
     var audioEnabled by remember(request.audioEnabled) { mutableStateOf(request.audioEnabled) }
@@ -49,21 +53,32 @@ fun GameMenuHomeScreen(
     val hasSettings = request.advancedCoreOptions.isNotEmpty() || request.coreOptions.isNotEmpty() ||
         request.coreConfig.controllerConfigs.values.any { it.size >= 2 }
     val hasControls = request.editTouchControlsSupported || saveSyncSupported || hasSettings || request.allTiltConfigurations.isNotEmpty()
+    val statesSupported = request.coreConfig.statesSupported
+    val resumeLabel = stringResource(R.string.game_menu_resume)
+    val saveLabel = stringResource(R.string.game_menu_save)
+    val loadLabel = stringResource(R.string.game_menu_load)
+    val quitLabel = stringResource(R.string.game_menu_quit)
     SideMenuPage("game-home") {
-        MenuSection("commands") {
-            if (request.coreConfig.statesSupported) {
-                MenuAction("save", titleRes = R.string.game_menu_save, icon = { MenuDrawableIcon(R.drawable.ic_menu_save) }) {
+        // The most-used actions as big tiles, one press away. Resume comes first and is highlighted,
+        // so A on a menu opened by mistake goes straight back to the game.
+        MenuTiles(
+            "quick",
+            listOfNotNull(
+                MenuTile("resume", resumeLabel, { Icon(Icons.Filled.PlayArrow, contentDescription = null) }, highlighted = true, onClick = onResume),
+                MenuTile("save", saveLabel, { MenuDrawableIcon(R.drawable.ic_menu_save) }) {
                     navController.navigateToRoute(GameMenuRoute.SAVE)
-                }
-                MenuAction("load", titleRes = R.string.game_menu_load, icon = { MenuDrawableIcon(R.drawable.ic_menu_load) }) {
+                }.takeIf { statesSupported },
+                MenuTile("load", loadLabel, { MenuDrawableIcon(R.drawable.ic_menu_load) }) {
                     navController.navigateToRoute(GameMenuRoute.LOAD)
-                }
-            }
+                }.takeIf { statesSupported },
+                MenuTile("quit", quitLabel, { MenuDrawableIcon(R.drawable.ic_menu_quit) }) {
+                    onCommand(InGameMenuCommand.Quit)
+                },
+            ),
+        )
+        MenuSection("commands") {
             MenuAction("restart", titleRes = R.string.game_menu_restart, icon = { MenuDrawableIcon(R.drawable.ic_menu_restart) }) {
                 if (askToConfirm) confirmRestart = true else onCommand(InGameMenuCommand.Restart)
-            }
-            MenuAction("quit", titleRes = R.string.game_menu_quit, icon = { MenuDrawableIcon(R.drawable.ic_menu_quit) }) {
-                onCommand(InGameMenuCommand.Quit)
             }
         }
         MenuSection("playback") {

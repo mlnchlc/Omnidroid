@@ -477,6 +477,7 @@
 
 
 
+    <string name="game_menu_resume">Resume</string>
     <string name="game_menu_save">Save</string>
     <string name="game_menu_load">Load</string>
     <string name="game_menu_restart">Restart</string>

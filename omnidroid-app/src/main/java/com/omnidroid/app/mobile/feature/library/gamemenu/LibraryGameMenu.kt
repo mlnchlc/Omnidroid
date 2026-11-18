@@ -1,5 +1,7 @@
 package com.omnidroid.app.mobile.feature.library.gamemenu
 
+import com.omnidroid.app.mobile.shared.compose.sidemenu.MenuTiles
+import com.omnidroid.app.mobile.shared.compose.sidemenu.MenuTile
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
@@ -71,7 +73,7 @@ import com.omnidroid.app.mobile.shared.compose.sidemenu.SideMenuScaffold
 import com.omnidroid.app.mobile.shared.compose.sidemenu.openMenuPage
 import com.omnidroid.app.mobile.shared.compose.sidemenu.rememberSideMenuState
 import com.omnidroid.app.mobile.shared.compose.sidemenu.validateSideMenuDestinations
-import com.omnidroid.app.mobile.shared.compose.ui.LibraryNeonGreen
+import com.omnidroid.app.mobile.shared.compose.ui.libraryAccentColor
 import com.omnidroid.app.mobile.shared.compose.ui.OmnidroidSmallGameImage
 import com.omnidroid.app.mobile.shared.compose.ui.chromeColors
 import com.omnidroid.app.mobile.shared.controller.ControllerHintBar
@@ -224,16 +226,26 @@ private fun LibraryGameMenuRoot(
     val speedSupported = remember(game.systemId) { runCatching { GameSystem.findById(game.systemId).fastForwardSupport }.getOrDefault(false) }
     SideMenuPage("library-game") {
         MenuSection("identity") { ContextActionHeader(game) }
-        MenuSection("commands") {
-            MenuAction("resume", titleRes = R.string.game_context_menu_resume,
-                icon = { Icon(Icons.Default.PlayArrow, contentDescription = null) }, onClick = onPlay)
-            MenuAction("restart", titleRes = R.string.game_context_menu_restart,
-                icon = { MenuDrawableIcon(R.drawable.ic_menu_restart) }, onClick = onRestart)
-            MenuAction("favorite", titleRes = if (game.isFavorite) R.string.game_context_menu_remove_from_favorites else R.string.game_context_menu_add_to_favorites,
-                icon = { Icon(if (game.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                    contentDescription = null, tint = if (game.isFavorite) LibraryNeonGreen else LocalContentColor.current) },
-            ) { actions.favorite(game, !game.isFavorite) }
-        }
+        // Tiles as in the in-game menu: the main commands one press away, Resume highlighted.
+        val favoriteLabel =
+            stringResource(if (game.isFavorite) R.string.game_context_menu_remove_from_favorites else R.string.game_context_menu_add_to_favorites)
+        MenuTiles(
+            "commands",
+            listOf(
+                MenuTile("resume", stringResource(R.string.game_context_menu_resume),
+                    { Icon(Icons.Default.PlayArrow, contentDescription = null) }, highlighted = true, onClick = onPlay),
+                MenuTile("restart", stringResource(R.string.game_context_menu_restart),
+                    { MenuDrawableIcon(R.drawable.ic_menu_restart) }, onClick = onRestart),
+                // The label says what pressing does; the heart only shows the state.
+                MenuTile("favorite", favoriteLabel, {
+                    Icon(
+                        if (game.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                        contentDescription = null,
+                        tint = if (game.isFavorite) libraryAccentColor else LocalContentColor.current,
+                    )
+                }) { actions.favorite(game, !game.isFavorite) },
+            ),
+        )
         MenuSection("playback", visible = speedSupported || syncSupported) {
             if (speedSupported) FrameSpeedMenuChoice(speed) { actions.frameSpeed(game, it) }
             if (syncSupported) {
