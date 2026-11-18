@@ -188,6 +188,8 @@ class GameMenuActivity : RetrogradeComponentActivity() {
                                     gameMenuRequest,
                                     onCommand = { requestClose(it) },
                                     saveSyncSupported = saveSyncManager.isSupported(),
+                                    // Closing with no command returns to the game unchanged.
+                                    onResume = { if (menu.transition.targetState) menu.closeThen() },
                                 )
                             }
                             composable(GameMenuRoute.SAVE) {

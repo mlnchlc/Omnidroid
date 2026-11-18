@@ -1,5 +1,22 @@
 package com.omnidroid.app.mobile.shared.compose.sidemenu
 
+import com.omnidroid.app.mobile.shared.controller.controllerFocusGlow
+import com.omnidroid.app.mobile.shared.compose.ui.chromeContentColor
+import com.omnidroid.app.mobile.shared.compose.ui.chromeColors
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.Alignment
+import androidx.compose.material3.Surface
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.unit.Constraints
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.material3.Text
@@ -146,3 +163,88 @@ fun SideMenuPageScope.MenuToggle(
 @Composable
 fun SideMenuPageScope.MenuLink(id: String, destination: SideMenuDestination, onNavigate: (SideMenuDestination) -> Unit) =
     MenuAction(id = id, titleRes = destination.titleRes) { onNavigate(destination) }
+
+/** A large square action in a [MenuTiles] row. */
+data class MenuTile(
+    val id: String,
+    val label: String,
+    val icon: @Composable () -> Unit,
+    val highlighted: Boolean = false,
+    val onClick: () -> Unit,
+)
+
+/**
+ * The most-used actions as big tiles, easier to hit than list rows, in both the portrait sheet and
+ * the side panel. One row when each tile gets at least [MinTileWidth], else two per row (a narrow
+ * panel, or a large font). Each tile is a controller focus target like any other row.
+ *
+ * A plain [Layout], not BoxWithConstraints: the tiles must be composed with the rest of the page,
+ * or [SideMenuPage] picks its focus target before they are registered.
+ */
+@Composable
+fun SideMenuPageScope.MenuTiles(id: String, tiles: List<MenuTile>) {
+    key(id) {
+        Layout(
+            content = { tiles.forEach { tile -> MenuTileCell(tile, Modifier) } },
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 12.dp),
+        ) { measurables, constraints ->
+            val gap = TileGap.roundToPx()
+            val width = constraints.maxWidth
+            val count = measurables.size
+            val perRow =
+                if (count > 2 && (width - gap * (count - 1)) / count < MinTileWidth.roundToPx()) 2 else count.coerceAtLeast(1)
+            val cellWidth = ((width - gap * (perRow - 1)) / perRow).coerceAtLeast(0)
+            // Tiles in a row share the tallest one's height, so a two-line label keeps them even.
+            val rows =
+                measurables.chunked(perRow).map { row ->
+                    val height = row.maxOf { it.maxIntrinsicHeight(cellWidth) }
+                    row.map { it.measure(Constraints.fixed(cellWidth, height)) }
+                }
+            val totalHeight = rows.sumOf { row -> row.maxOf { it.height } } + gap * (rows.size - 1).coerceAtLeast(0)
+            layout(width, totalHeight) {
+                var y = 0
+                rows.forEach { row ->
+                    row.forEachIndexed { i, placeable -> placeable.placeRelative(i * (cellWidth + gap), y) }
+                    y += row.maxOf { it.height } + gap
+                }
+            }
+        }
+    }
+}
+
+private val TileGap = 8.dp
+
+private val MinTileWidth = 80.dp
+
+@Composable
+private fun SideMenuPageScope.MenuTileCell(
+    tile: MenuTile,
+    modifier: Modifier,
+) {
+    val shape = RoundedCornerShape(12.dp)
+    Surface(
+        onClick = tile.onClick,
+        // The focus requester must come before the clickable for focus restore to find it.
+        modifier = itemModifier(tile.id, true, modifier.heightIn(min = 76.dp).controllerFocusGlow(shape)),
+        shape = shape,
+        color = if (tile.highlighted) chromeColors.gameMenuAccent.copy(alpha = 0.18f) else chromeColors.panelSelected,
+        contentColor = chromeContentColor,
+        border = BorderStroke(1.dp, if (tile.highlighted) chromeColors.gameMenuAccent else chromeColors.panelBorder),
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 10.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            tile.icon()
+            Text(
+                tile.label,
+                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(top = 6.dp),
+            )
+        }
+    }
+}
