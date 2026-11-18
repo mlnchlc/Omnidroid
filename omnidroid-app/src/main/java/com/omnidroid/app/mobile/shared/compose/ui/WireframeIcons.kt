@@ -20,8 +20,8 @@ object WireframeIcons {
         }
     }
 
-    val ViewCarousel: ImageVector by lazy {
-        icon("ViewCarousel") {
+    val ViewConsole: ImageVector by lazy {
+        icon("ViewConsole") {
             stroke("M4.0,6H6.5A1.5,1.5 0 0 1 8.0,7.5V16.5A1.5,1.5 0 0 1 6.5,18H4.0A1.5,1.5 0 0 1 2.5,16.5V7.5A1.5,1.5 0 0 1 4.0,6Z", 2.0f)
             stroke("M10.75,5H13.25A1.5,1.5 0 0 1 14.75,6.5V17.5A1.5,1.5 0 0 1 13.25,19H10.75A1.5,1.5 0 0 1 9.25,17.5V6.5A1.5,1.5 0 0 1 10.75,5Z", 2.0f)
             stroke("M17.5,6H20.0A1.5,1.5 0 0 1 21.5,7.5V16.5A1.5,1.5 0 0 1 20.0,18H17.5A1.5,1.5 0 0 1 16,16.5V7.5A1.5,1.5 0 0 1 17.5,6Z", 2.0f)

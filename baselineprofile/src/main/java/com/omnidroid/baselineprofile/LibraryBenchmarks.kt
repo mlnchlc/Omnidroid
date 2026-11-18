@@ -19,7 +19,7 @@ class LibraryBenchmarks {
     @Test fun grid1000() = scrolling(1_000, "GRID")
     @Test fun grid5000() = scrolling(5_000, "GRID")
     @Test fun list5000() = scrolling(5_000, "LIST")
-    @Test fun carousel5000() = scrolling(5_000, "CAROUSEL")
+    @Test fun console5000() = scrolling(5_000, "CONSOLE")
 
     @Test
     fun openDetails() = rule.measureRepeated(

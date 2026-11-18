@@ -64,7 +64,7 @@ internal fun rememberLibraryPagedScrollState(): LibraryPagedScrollState {
 internal fun LibraryPagedContent(
     games: LazyPagingItems<Game>,
     featured: Game?,
-    list: Boolean,
+    layout: LibraryLayout,
     zoomDensity: Int,
     portrait: Boolean,
     sharedTransitionScope: SharedTransitionScope,
@@ -80,7 +80,7 @@ internal fun LibraryPagedContent(
 ) {
     val items = remember(games, featured) { LibraryPagedItems(games, featured) }
     // Kept independently when changing modes; reset by the parent's dataset key on search/filter/sort.
-    val isList = list
+    val isList = layout == LibraryLayout.LIST
     val state = if (isList) scrollState.list else scrollState.grid
     val adaptive = LocalAdaptiveLayout.current
 

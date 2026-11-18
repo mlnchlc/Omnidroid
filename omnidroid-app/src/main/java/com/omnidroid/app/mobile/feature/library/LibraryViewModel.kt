@@ -61,8 +61,8 @@ class LibraryViewModel(
         val operationInProgress: Boolean = false,
         val syncProgress: SyncProgress? = null,
         val zoomDensity: Int = 0,
-        /** Home's view for the current orientation (each orientation remembers its own). */
-        val homeView: HomeView = HomeView.CAROUSEL,
+        /** The layout for the current orientation (each orientation remembers its own). */
+        val layout: LibraryLayout = LibraryLayout.CONSOLE,
         val sort: LibrarySort = LibrarySort.TITLE,
         val selectedSystemGameCount: Int? = null,
         val startupFilter: LibraryFilter = LibraryFilter.All,
@@ -78,14 +78,14 @@ class LibraryViewModel(
 
     private data class LibraryPresentation(
         val zoomDensity: Int,
-        val homeView: HomeView,
+        val layout: LibraryLayout,
         val sort: LibrarySort,
     )
 
     private val preferences = SharedPreferencesHelper.getSharedPreferences(appContext)
 
     init {
-        migrateLayoutPrefs()
+        seedPortraitLayout()
     }
 
     private val startupFilterFlow = startupStore.observe()
@@ -95,16 +95,16 @@ class LibraryViewModel(
     private val zoomDensityFlow = MutableStateFlow(readZoomDensity())
     private val portraitFlow =
         MutableStateFlow(appContext.resources.configuration.orientation == Configuration.ORIENTATION_PORTRAIT)
-    private val landscapeViewFlow = MutableStateFlow(readHomeView(portrait = false))
-    private val portraitViewFlow = MutableStateFlow(readHomeView(portrait = true))
-    private val homeViewFlow = combine(portraitFlow, landscapeViewFlow, portraitViewFlow, HomeViewPrefs::viewFor)
+    private val landscapeLayoutFlow = MutableStateFlow(readLayout(portrait = false))
+    private val portraitLayoutFlow = MutableStateFlow(readLayout(portrait = true))
+    private val layoutFlow = combine(portraitFlow, landscapeLayoutFlow, portraitLayoutFlow, LibraryLayout::forOrientation)
 
     // Settings › Display writes these keys too; follow them while the library stays alive.
     private val layoutPreferenceListener =
         android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
             when (key) {
-                HomeViewPrefs.LANDSCAPE_KEY -> landscapeViewFlow.value = readHomeView(portrait = false)
-                HomeViewPrefs.PORTRAIT_KEY -> portraitViewFlow.value = readHomeView(portrait = true)
+                LAYOUT_KEY -> landscapeLayoutFlow.value = readLayout(portrait = false)
+                PORTRAIT_LAYOUT_KEY -> portraitLayoutFlow.value = readLayout(portrait = true)
             }
         }
 
@@ -119,8 +119,8 @@ class LibraryViewModel(
     private val sortFlow = MutableStateFlow(readSort())
     private val syncProgressFlow = SyncProgressTracker.progress
     private val presentationFlow =
-        combine(zoomDensityFlow, homeViewFlow, sortFlow) { zoom, homeView, sort ->
-            LibraryPresentation(zoom, homeView, sort)
+        combine(zoomDensityFlow, layoutFlow, sortFlow) { zoom, layout, sort ->
+            LibraryPresentation(zoom, layout, sort)
         }
     private val libraryOperationInProgress =
         PendingOperationsMonitor(appContext).anyLibraryOperationInProgress()
@@ -165,7 +165,7 @@ class LibraryViewModel(
                 operationInProgress = chrome.operationInProgress,
                 syncProgress = if (chrome.operationInProgress) chrome.syncProgress else null,
                 zoomDensity = chrome.presentation.zoomDensity,
-                homeView = chrome.presentation.homeView,
+                layout = chrome.presentation.layout,
                 sort = chrome.presentation.sort,
                 selectedSystemGameCount = selectedCount,
                 startupFilter = chrome.startupFilter,
@@ -175,7 +175,7 @@ class LibraryViewModel(
             SharingStarted.WhileSubscribed(5_000),
             UiState(
                 zoomDensity = zoomDensityFlow.value,
-                homeView = currentHomeView(),
+                layout = currentLayout(),
                 sort = sortFlow.value,
                 filter = filterFlow.value,
                 startupFilter = startupStore.get(),
@@ -243,42 +243,29 @@ class LibraryViewModel(
         preferences.edit().putInt(ZOOM_DENSITY_KEY, value).apply()
     }
 
-    /** The screen's orientation; Home shows the view chosen for it. */
+    /** The screen's orientation; the library shows the layout chosen for it. */
     fun setPortrait(portrait: Boolean) {
         portraitFlow.value = portrait
     }
 
-    /** Changes Home's view for the current orientation only. */
-    fun setHomeView(view: HomeView) {
+    /** Changes the layout for the current orientation only. */
+    fun setLayout(layout: LibraryLayout) {
         val portrait = portraitFlow.value
-        (if (portrait) portraitViewFlow else landscapeViewFlow).value = view
-        preferences.edit().putString(HomeViewPrefs.key(portrait), view.name).apply()
+        (if (portrait) portraitLayoutFlow else landscapeLayoutFlow).value = layout
+        preferences.edit().putString(layoutKey(portrait), layout.name).apply()
     }
 
-    private fun currentHomeView(): HomeView =
-        HomeViewPrefs.viewFor(portraitFlow.value, landscapeViewFlow.value, portraitViewFlow.value)
+    private fun currentLayout(): LibraryLayout =
+        LibraryLayout.forOrientation(portraitFlow.value, landscapeLayoutFlow.value, portraitLayoutFlow.value)
 
-    private fun readHomeView(portrait: Boolean): HomeView =
-        HomeView.fromName(preferences.getString(HomeViewPrefs.key(portrait), null)) ?: HomeView.CAROUSEL
+    private fun readLayout(portrait: Boolean): LibraryLayout =
+        LibraryLayout.fromName(preferences.getString(layoutKey(portrait), null))
 
-    /**
-     * Once: Home became the only layout and each orientation got its own view. Carry over what
-     * the user saw before into both, then drop the old keys.
-     */
-    private fun migrateLayoutPrefs() {
-        if (preferences.contains(HomeViewPrefs.LANDSCAPE_KEY) || preferences.contains(HomeViewPrefs.PORTRAIT_KEY)) return
-        val view =
-            HomeViewPrefs.migrate(
-                preferences.getString(HomeViewPrefs.OLD_LAYOUT_KEY, null),
-                preferences.getString(HomeViewPrefs.OLD_HOME_VIEW_KEY, null),
-            )
-        preferences.edit()
-            .putString(HomeViewPrefs.LANDSCAPE_KEY, view.name)
-            .putString(HomeViewPrefs.PORTRAIT_KEY, view.name)
-            .remove(HomeViewPrefs.OLD_LAYOUT_KEY)
-            .remove(HomeViewPrefs.OLD_HOME_VIEW_KEY)
-            .remove(HomeViewPrefs.OLD_CLASSIC_LAYOUT_KEY)
-            .apply()
+    /** Portrait got its own layout later: it starts as the one already chosen. */
+    private fun seedPortraitLayout() {
+        if (preferences.contains(PORTRAIT_LAYOUT_KEY)) return
+        val layout = preferences.getString(LAYOUT_KEY, null) ?: return
+        preferences.edit().putString(PORTRAIT_LAYOUT_KEY, layout).apply()
     }
 
     private fun readZoomDensity(): Int {
@@ -330,12 +317,12 @@ class LibraryViewModel(
         }
 
     fun zoomIn() {
-        if (currentHomeView() != HomeView.GRID) return
+        if (currentLayout() != LibraryLayout.GRID) return
         setZoomDensity(zoomDensityFlow.value - 1)
     }
 
     fun zoomOut() {
-        if (currentHomeView() != HomeView.GRID) return
+        if (currentLayout() != LibraryLayout.GRID) return
         setZoomDensity(zoomDensityFlow.value + 1)
     }
 
@@ -417,6 +404,31 @@ class LibraryViewModel(
         private const val ZOOM_DENSITY_KEY = "pref_library_zoom_density"
         private const val SORT_KEY = "pref_library_sort"
         const val MAX_ZOOM_DENSITY = 2
+
+        /** The layout in landscape (the original key) and in portrait. */
+        const val LAYOUT_KEY = "pref_library_layout"
+        const val PORTRAIT_LAYOUT_KEY = "pref_library_layout_portrait"
+
+        fun layoutKey(portrait: Boolean): String = if (portrait) PORTRAIT_LAYOUT_KEY else LAYOUT_KEY
+    }
+}
+
+/** The library's views, each with the consoles along the bottom. */
+enum class LibraryLayout {
+    CONSOLE,
+    GRID,
+    LIST,
+    ;
+
+    companion object {
+        /** A saved layout name; unknown or missing means Console, the default. */
+        fun fromName(name: String?): LibraryLayout = entries.firstOrNull { it.name == name } ?: CONSOLE
+
+        fun forOrientation(
+            portrait: Boolean,
+            landscapeLayout: LibraryLayout,
+            portraitLayout: LibraryLayout,
+        ): LibraryLayout = if (portrait) portraitLayout else landscapeLayout
     }
 }
 

@@ -33,7 +33,7 @@ class BaselineProfileGenerator {
             scrollLibrary()
             startFixture(1_000, "LIST")
             scrollLibrary(vertical = true)
-            startFixture(1_000, "CAROUSEL")
+            startFixture(1_000, "CONSOLE")
             scrollLibrary()
         }
     }

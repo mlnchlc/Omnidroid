@@ -26,11 +26,11 @@ Quick navigation:
 
 ## 1. Context to carry into a future chat
 
-Home is the only library layout: consoles in a dock along the bottom and one of
-three views, `HomeView.CAROUSEL`, `GRID` and `LIST` (landscape and portrait each
-remember their own). They consume the same Room-backed `Flow<PagingData<Game>>`
-from `LibraryViewModel`. The carousel uses a custom windowed carousel and
-animation state. Grid and List share a lazy-grid
+The three modes are `LibraryLayout.CONSOLE`, `GRID` and `LIST`, each with the
+consoles in a dock along the bottom (landscape and portrait each remember their
+own mode). They consume the same Room-backed `Flow<PagingData<Game>>` from
+`LibraryViewModel`. Console uses a custom windowed carousel and animation
+state. Grid and List share a lazy-grid
 renderer; List is a one-column vertical grid. Their source-of-truth state,
 database queries, presentation geometry, image loading and host actions live in
 different files.
@@ -58,7 +58,7 @@ Suggested future-chat prompt:
   top bar, and connects UI callbacks to `GameInteractor` and menus.
 - [LibraryViewModel.kt][vm] — `UiState`, the paged `games` flow, filters, search,
   sort, density, layout preferences, Continue selection and scan requests. Also
-  declares `LibrarySort` (`HomeView` lives in `HomeViewPrefs.kt`).
+  declares `LibraryLayout` and `LibrarySort`.
 - [LibraryFilter.kt][filter] — `All`, `Favorites`, and `System(MetaSystemID)`.
 - [LibraryScreen.kt][screen] — outer portrait/landscape arrangement, Console
   backdrop, sidebar/bottom dock, loading/empty states, renderer dispatch,
@@ -204,9 +204,8 @@ with `LIMIT 1`, and the VM takes its first element. [VM][vm], [DAO][dao].
 
 Presentation preferences use `SharedPreferencesHelper`'s Harmony preferences:
 
-- `pref_library_home_view_landscape` / `pref_library_home_view_portrait`:
-  `HomeView` name; fallback is `CAROUSEL`. `HomeViewPrefs.migrate` filled both
-  once from the older `pref_library_layout` / `pref_library_home_view`.
+- `pref_library_layout` (landscape) / `pref_library_layout_portrait`: enum
+  name; fallback is `CONSOLE`. Portrait starts as the landscape choice.
 - `pref_library_zoom_density`: integer clamped to `0..2`; fallback is `0`.
 - `pref_library_sort`: enum name; fallback is `TITLE`.
 - Startup destination uses the `pref_key_startup_destination` string resource's
@@ -245,7 +244,7 @@ The current screen does not implement a dedicated paging-error/retry panel in
 this branch; do not describe a paging failure as an explicit retry UI.
 [Screen `LibraryGames`][screen].
 
-The top bar's view switch (`HomeViewControl`) selects the view for the current
+The top bar's switch (`LibraryLayoutControl`) selects the mode for the current
 orientation. Density applies only to Grid; `0` means largest cards and `2` the
 densest grid. It changes by pinch or controller L2/R2 (there is no on-screen
 zoom bar). Pinch zoom is Grid-only, accumulates a live scale, crosses a `1.25f`

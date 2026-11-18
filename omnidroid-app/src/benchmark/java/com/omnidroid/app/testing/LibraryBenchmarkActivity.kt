@@ -32,7 +32,7 @@ import androidx.paging.PagingData
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.omnidroid.app.mobile.feature.library.ConsoleBackdrop
 import com.omnidroid.app.mobile.feature.library.ConsoleLibrary
-import com.omnidroid.app.mobile.feature.library.HomeView
+import com.omnidroid.app.mobile.feature.library.LibraryLayout
 import com.omnidroid.app.mobile.feature.library.LibraryPagedContent
 import com.omnidroid.app.mobile.shared.compose.ui.AppTheme
 import com.omnidroid.app.mobile.shared.compose.ui.LocalAdaptiveLayout
@@ -50,8 +50,7 @@ class LibraryBenchmarkActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         val count = intent.getIntExtra("count", 1_000).coerceIn(1, 5_000)
-        // CAROUSEL, GRID or LIST; CONSOLE (older scripts) means the carousel.
-        val layout = (intent.getStringExtra("layout") ?: "GRID").let { if (it == "CONSOLE") HomeView.CAROUSEL else requireNotNull(HomeView.fromName(it)) }
+        val layout = LibraryLayout.valueOf(intent.getStringExtra("layout") ?: "GRID")
         lifecycleScope.launch {
             val fixtures = withContext(Dispatchers.IO) { fixtures(count) }
             setContent { BenchmarkLibrary(fixtures, layout) }
@@ -97,7 +96,7 @@ class LibraryBenchmarkActivity : ComponentActivity() {
 
 @OptIn(ExperimentalSharedTransitionApi::class, ExperimentalComposeUiApi::class)
 @Composable
-private fun BenchmarkLibrary(fixtures: List<Game>, layout: HomeView) {
+private fun BenchmarkLibrary(fixtures: List<Game>, layout: LibraryLayout) {
     val flow = remember(fixtures) { flowOf(PagingData.from(fixtures)) }
     val games = flow.collectAsLazyPagingItems()
     var backdrop by remember { mutableStateOf<Game?>(fixtures.first()) }
@@ -109,11 +108,11 @@ private fun BenchmarkLibrary(fixtures: List<Game>, layout: HomeView) {
                 LocalAdaptiveLayout provides calculateAdaptiveLayoutSpec(maxWidth, maxHeight),
             ) {
                 Box(Modifier.fillMaxSize().testTag(if (games.itemCount > 0) "benchmark-library-ready" else "benchmark-library-loading")) {
-                    if (layout == HomeView.CAROUSEL) ConsoleBackdrop(backdrop, Modifier.matchParentSize())
+                    if (layout == LibraryLayout.CONSOLE) ConsoleBackdrop(backdrop, Modifier.matchParentSize())
                     SharedTransitionLayout {
                         val shared = this
                         AnimatedVisibility(true) {
-                            if (layout == HomeView.CAROUSEL) {
+                            if (layout == LibraryLayout.CONSOLE) {
                                 ConsoleLibrary(
                                     sharedTransitionScope = shared,
                                     animatedVisibilityScope = this,
@@ -131,7 +130,7 @@ private fun BenchmarkLibrary(fixtures: List<Game>, layout: HomeView) {
                                 LibraryPagedContent(
                                     games = games,
                                     featured = fixtures.first(),
-                                    list = layout == HomeView.LIST,
+                                    layout = layout,
                                     zoomDensity = 1,
                                     portrait = false,
                                     sharedTransitionScope = shared,
