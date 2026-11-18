@@ -72,10 +72,8 @@ import com.omnidroid.app.mobile.feature.displays.DisplaysDialog
 import com.omnidroid.app.mobile.feature.gamedetails.GameDetailsScreen
 import com.omnidroid.app.mobile.feature.gamedetails.GameDetailsViewModel
 import com.omnidroid.app.mobile.feature.library.LibraryFilter
-import com.omnidroid.app.mobile.feature.library.HomeViewCycleButton
-import com.omnidroid.app.mobile.feature.library.HomeViewSwitch
-import com.omnidroid.app.mobile.feature.library.homeViewSwitchWidth
-import com.omnidroid.app.mobile.feature.library.LibraryLayout
+import com.omnidroid.app.mobile.feature.library.HomeView
+import com.omnidroid.app.mobile.feature.library.HomeViewControl
 import com.omnidroid.app.mobile.feature.library.LibraryScreen
 import com.omnidroid.app.mobile.feature.library.LibraryStartupStore
 import com.omnidroid.app.mobile.feature.library.LibraryTopBar
@@ -383,7 +381,7 @@ class MainActivity : RetrogradeComponentActivity(), BusyActivity {
                     .value
                     .any { it.getOmnidroidInputDevice() is OmnidroidInputDeviceGamePad }
 
-            val isGrid = libraryState.contentLayout == LibraryLayout.GRID
+            val isGrid = libraryState.homeView == HomeView.GRID
             val libraryHints =
                 ControllerHints.library(
                     switchConsoles = stringResource(R.string.controller_hint_switch_consoles),
@@ -417,7 +415,7 @@ class MainActivity : RetrogradeComponentActivity(), BusyActivity {
                     back = stringResource(R.string.controller_hint_back),
                 )
 
-            LaunchedEffect(currentRoute, selectedGameState.value, libraryState.contentLayout) {
+            LaunchedEffect(currentRoute, selectedGameState.value, libraryState.homeView) {
                 controllerNav.setHints(
                     when {
                         selectedGameState.value != null -> simpleHints
@@ -608,7 +606,6 @@ class MainActivity : RetrogradeComponentActivity(), BusyActivity {
                                 },
                                 onGameLongClick = onGameLongClick,
                                 onFavoriteToggle = onGameFavoriteToggle,
-                                onAddConsole = { navController.navigateToRoute(MainRoute.ADD_CONSOLES) },
                                 controllerConnected = gamepadConnected,
                                 portraitColumnWidth = portraitColumnWidth,
                                 backdropTopBleed = libraryTopPadding,
@@ -887,21 +884,14 @@ class MainActivity : RetrogradeComponentActivity(), BusyActivity {
             if (currentRoute != MainRoute.SETTINGS_UI_SCALE) {
                 LibraryTopBar(
                     afterSearch =
-                        if (currentRoute == MainRoute.HOME && libraryState.layout == LibraryLayout.HOME) {
+                        if (currentRoute == MainRoute.HOME) {
                             { room ->
-                                // The three-way switch when it fits beside search, else one button
-                                // that steps through the views (portrait, narrow 4:3 screens).
-                                if (portrait || room < homeViewSwitchWidth()) {
-                                    HomeViewCycleButton(
-                                        view = libraryState.homeView,
-                                        onViewChange = { libraryViewModel.setHomeView(it) },
-                                    )
-                                } else {
-                                    HomeViewSwitch(
-                                        view = libraryState.homeView,
-                                        onViewChange = { libraryViewModel.setHomeView(it) },
-                                    )
-                                }
+                                HomeViewControl(
+                                    view = libraryState.homeView,
+                                    onViewChange = { libraryViewModel.setHomeView(it) },
+                                    portrait = portrait,
+                                    room = room,
+                                )
                             }
                         } else {
                             null

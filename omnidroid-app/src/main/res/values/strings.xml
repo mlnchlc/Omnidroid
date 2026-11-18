@@ -364,13 +364,12 @@
 
 
     <string name="settings_section_startup">Startup</string>
+    <string name="settings_title_manage_consoles">Add or manage consoles</string>
+    <string name="settings_description_manage_consoles">Emulators, databases and support files for each console</string>
     <string name="settings_title_startup_destination">Startup screen</string>
     <string name="settings_description_startup_destination">What Omnidroid shows when it opens</string>
     <string name="settings_startup_full_library">Full library</string>
     <string name="settings_startup_favorites">Favorites</string>
-    <string name="settings_action_set_startup">Set as startup screen</string>
-    <string name="settings_action_clear_startup">Clear startup screen</string>
-    <string name="settings_startup_dialog_body">Omnidroid will open straight into the %1$s library every time it starts.</string>
 
     <string name="reset_settings_warning_message_title">Are you sure?</string>
     <string name="reset_settings_warning_message_description">All settings go back to their defaults: your games folder, controller buttons and shortcuts, per-console options and display settings. Downloaded emulator cores are deleted and downloaded again when needed. Saves and save states are kept.</string>
@@ -618,30 +617,22 @@
     <string name="controller_hint_options">Options</string>
     <string name="controller_hint_search">Search</string>
     <string name="controller_hint_zoom">Zoom</string>
-    <string name="library_zoom_in">Zoom in</string>
-    <string name="library_zoom_out">Zoom out</string>
     <string name="library_view_grid">Grid view</string>
     <string name="library_view_list">List view</string>
-    <string name="library_view_console">Console view</string>
-    <string name="library_view_home">Home view</string>
-    <string name="library_view_row">Row view</string>
+    <string name="library_view_carousel">Carousel view</string>
     <string name="home_all_games">All games</string>
-    <!-- Portrait Home top bar button; %1$s is the current view, e.g. "Row view" -->
+    <!-- Portrait Home top bar button; %1$s is the current view, e.g. "Carousel view" -->
     <string name="home_view_switch">%1$s, change view</string>
     <string name="settings_section_home">Home</string>
-    <string name="library_layout_home_short">Home</string>
-    <string name="library_layout_console_short">Console</string>
     <string name="library_layout_grid_short">Grid</string>
     <string name="library_layout_list_short">List</string>
-    <string name="library_layout_row_short">Row</string>
-    <string name="settings_title_library_layout">Library layout</string>
-    <string name="settings_description_library_layout">Home keeps the consoles along the bottom; the others use the sidebar</string>
-    <string name="settings_title_home_view">Home view</string>
-    <string name="settings_description_home_view">Also switchable from the Home top bar</string>
+    <string name="library_layout_carousel_short">Carousel</string>
+    <string name="settings_title_home_view_landscape">Home view in landscape</string>
+    <string name="settings_title_home_view_portrait">Home view in portrait</string>
+    <string name="settings_description_home_view">Each orientation remembers its own view; the Home top bar changes the one on screen</string>
     <!-- Home header, e.g. "played 12 min. ago" -->
     <string name="home_played_ago">played %1$s</string>
     <string name="home_played_just_now">played just now</string>
-    <string name="library_view_sidebar">Library with sidebar</string>
     <string name="library_console_start">Start</string>
     <string name="library_play_random">Play random game</string>
     <string name="library_sort">Sort</string>

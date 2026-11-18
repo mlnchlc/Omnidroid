@@ -26,9 +26,11 @@ Quick navigation:
 
 ## 1. Context to carry into a future chat
 
-The three modes are `LibraryLayout.CONSOLE`, `GRID` and `LIST`. They consume the
-same Room-backed `Flow<PagingData<Game>>` from `LibraryViewModel`. Console uses a
-custom windowed carousel and animation state. Grid and List share a lazy-grid
+Home is the only library layout: consoles in a dock along the bottom and one of
+three views, `HomeView.CAROUSEL`, `GRID` and `LIST` (landscape and portrait each
+remember their own). They consume the same Room-backed `Flow<PagingData<Game>>`
+from `LibraryViewModel`. The carousel uses a custom windowed carousel and
+animation state. Grid and List share a lazy-grid
 renderer; List is a one-column vertical grid. Their source-of-truth state,
 database queries, presentation geometry, image loading and host actions live in
 different files.
@@ -56,7 +58,7 @@ Suggested future-chat prompt:
   top bar, and connects UI callbacks to `GameInteractor` and menus.
 - [LibraryViewModel.kt][vm] — `UiState`, the paged `games` flow, filters, search,
   sort, density, layout preferences, Continue selection and scan requests. Also
-  declares `LibraryLayout` and `LibrarySort`.
+  declares `LibrarySort` (`HomeView` lives in `HomeViewPrefs.kt`).
 - [LibraryFilter.kt][filter] — `All`, `Favorites`, and `System(MetaSystemID)`.
 - [LibraryScreen.kt][screen] — outer portrait/landscape arrangement, Console
   backdrop, sidebar/bottom dock, loading/empty states, renderer dispatch,
@@ -202,7 +204,9 @@ with `LIMIT 1`, and the VM takes its first element. [VM][vm], [DAO][dao].
 
 Presentation preferences use `SharedPreferencesHelper`'s Harmony preferences:
 
-- `pref_library_layout`: enum name; fallback is `CONSOLE`.
+- `pref_library_home_view_landscape` / `pref_library_home_view_portrait`:
+  `HomeView` name; fallback is `CAROUSEL`. `HomeViewPrefs.migrate` filled both
+  once from the older `pref_library_layout` / `pref_library_home_view`.
 - `pref_library_zoom_density`: integer clamped to `0..2`; fallback is `0`.
 - `pref_library_sort`: enum name; fallback is `TITLE`.
 - Startup destination uses the `pref_key_startup_destination` string resource's
@@ -241,13 +245,12 @@ The current screen does not implement a dedicated paging-error/retry panel in
 this branch; do not describe a paging failure as an explicit retry UI.
 [Screen `LibraryGames`][screen].
 
-The bottom view bar selects the three layouts. Density controls apply only to
-Grid; `0` means largest cards and `2` the densest grid. Touch zoom controls are
-hidden when a controller is connected; controller zoom remains wired through
-the host. Pinch zoom is Grid-only, accumulates a live scale, crosses a `1.25f`
+The top bar's view switch (`HomeViewControl`) selects the view for the current
+orientation. Density applies only to Grid; `0` means largest cards and `2` the
+densest grid. It changes by pinch or controller L2/R2 (there is no on-screen
+zoom bar). Pinch zoom is Grid-only, accumulates a live scale, crosses a `1.25f`
 step threshold to change density, and resets the temporary scale on release.
-`LibraryZoomControls` reverses the track position relative to density with
-`MAX_ZOOM_DENSITY - density`. [Controls in LibraryScreen.kt][screen].
+[Pinch zoom in LibraryScreen.kt][screen].
 
 Long-pressing a console logo opens `SetStartupScreenDialog`, which sets/unsets
 that system as startup. Favorites and All have their own dock entries; Add

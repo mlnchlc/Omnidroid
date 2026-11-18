@@ -1,5 +1,10 @@
 package com.omnidroid.app.mobile.feature.settings.uiscale
 
+import com.omnidroid.app.mobile.shared.compose.ui.rememberContentEdges
+import com.omnidroid.app.mobile.shared.compose.ui.contentEdge
+import com.omnidroid.app.mobile.feature.library.HomeViewControl
+import com.omnidroid.app.mobile.feature.library.HomeView
+import com.omnidroid.app.mobile.feature.library.HomeConsoleRow
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -47,11 +52,7 @@ import androidx.core.content.edit
 import com.omnidroid.R
 import com.omnidroid.app.mobile.shared.compose.ui.FloatingChromeButton
 import com.omnidroid.app.mobile.feature.library.LibraryFilter
-import com.omnidroid.app.mobile.feature.library.LibraryLayout
-import com.omnidroid.app.mobile.feature.library.LibraryLayoutToggle
-import com.omnidroid.app.mobile.feature.library.LibrarySidebar
 import com.omnidroid.app.mobile.feature.library.LibraryTopBar
-import com.omnidroid.app.mobile.feature.library.PortraitConsoleBar
 import com.omnidroid.app.mobile.shared.compose.ui.LibraryNeonGreen
 import com.omnidroid.app.mobile.shared.compose.ui.LocalAdaptiveLayout
 import com.omnidroid.app.mobile.shared.compose.ui.calculateAdaptiveLayoutSpec
@@ -85,7 +86,7 @@ fun UiScalePreviewScreen(
 
     var currentStep by rememberSaveable { mutableIntStateOf(initialStep) }
     var previewFilter by remember { mutableStateOf<LibraryFilter>(LibraryFilter.All) }
-    var previewLayout by remember { mutableStateOf(LibraryLayout.CONSOLE) }
+    var previewView by remember { mutableStateOf(HomeView.CAROUSEL) }
 
     val displaySystems =
         remember(availableConsoles) {
@@ -114,74 +115,24 @@ fun UiScalePreviewScreen(
         CompositionLocalProvider(
             LocalAdaptiveLayout provides adaptiveSpec,
         ) {
-            // 1. Mock library background with controls at their natural positions
+            // 1. Mock Home with its controls at their natural positions: the view switch in the top
+            // bar and the console dock along the bottom.
             Box(modifier = Modifier.fillMaxSize()) {
-                if (portrait) {
-                    Column(
-                        modifier =
-                            Modifier
-                                .fillMaxSize()
-                                .padding(top = libraryTopPadding),
-                    ) {
-                        // Empty games area in the middle with View toggle at the bottom
-                        Box(
-                            modifier =
-                                Modifier
-                                    .weight(1f)
-                                    .fillMaxWidth(),
-                        ) {
-                            LibraryLayoutToggle(
-                                layout = previewLayout,
-                                onLayoutChange = { previewLayout = it },
-                                modifier =
-                                    Modifier
-                                        .align(Alignment.BottomEnd)
-                                        .padding(end = 8.dp, bottom = 6.dp),
-                            )
-                        }
-                        // Bottom console bar
-                        PortraitConsoleBar(
-                            filter = previewFilter,
-                            systems = displaySystems,
-                            selectedGameCount = null,
-                            startupFilter = LibraryFilter.All,
-                            onFilterSelected = { previewFilter = it },
-                            onConsoleLongClick = {},
-                            onAddConsole = {},
-                        )
-                    }
-                } else {
-                    Row(
-                        modifier =
-                            Modifier
-                                .fillMaxSize()
-                                .padding(top = libraryTopPadding)
-                                .hugDisplayCutout(WindowInsetsSides.Horizontal),
-                    ) {
-                        LibrarySidebar(
-                            filter = previewFilter,
-                            systems = displaySystems,
-                            startupFilter = LibraryFilter.All,
-                            onFilterSelected = { previewFilter = it },
-                            onConsoleLongClick = {},
-                            onAddConsole = {},
-                        )
-                        Box(
-                            modifier =
-                                Modifier
-                                    .weight(1f)
-                                    .fillMaxHeight(),
-                        ) {
-                            LibraryLayoutToggle(
-                                layout = previewLayout,
-                                onLayoutChange = { previewLayout = it },
-                                modifier =
-                                    Modifier
-                                        .align(Alignment.BottomEnd)
-                                        .padding(end = 8.dp, bottom = 6.dp),
-                            )
-                        }
-                    }
+                Column(
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .padding(top = libraryTopPadding),
+                ) {
+                    Spacer(modifier = Modifier.weight(1f))
+                    HomeConsoleRow(
+                        filter = previewFilter,
+                        systems = displaySystems,
+                        selectedGameCount = null,
+                        portrait = portrait,
+                        edges = rememberContentEdges(contentEdge(portrait)),
+                        onFilterSelected = { previewFilter = it },
+                    )
                 }
 
                 // Top bar
@@ -193,6 +144,9 @@ fun UiScalePreviewScreen(
                     onSettingsPressed = {},
                     onProfilePressed = {},
                     portrait = portrait,
+                    afterSearch = { room ->
+                        HomeViewControl(view = previewView, onViewChange = { previewView = it }, portrait = portrait, room = room)
+                    },
                 )
             }
 

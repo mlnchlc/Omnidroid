@@ -80,47 +80,6 @@ private fun StartupDestinationIcon(filter: LibraryFilter) {
 }
 
 @Composable
-fun SetStartupScreenDialog(
-    console: MetaSystemID,
-    isStartupScreen: Boolean,
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit,
-) {
-    val consoleName = stringResource(id = console.titleResId)
-
-    OmnidroidDialog(
-        title = { Text(text = consoleName) },
-        text = {
-            Text(text = stringResource(R.string.settings_startup_dialog_body, consoleName))
-        },
-        onDismissRequest = onDismiss,
-        confirmButton = {
-            OmnidroidDialogButton(
-                onClick = onConfirm,
-            ) {
-                Text(
-                    text =
-                        stringResource(
-                            if (isStartupScreen) {
-                                R.string.settings_action_clear_startup
-                            } else {
-                                R.string.settings_action_set_startup
-                            },
-                        ),
-                )
-            }
-        },
-        dismissButton = {
-            OmnidroidDialogButton(
-                onClick = onDismiss,
-            ) {
-                Text(text = stringResource(R.string.cancel))
-            }
-        },
-    )
-}
-
-@Composable
 fun StartupDestinationPickerDialog(
     destinations: List<LibraryFilter>,
     selected: LibraryFilter,

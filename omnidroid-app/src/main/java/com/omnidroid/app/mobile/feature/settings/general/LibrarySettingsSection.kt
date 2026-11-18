@@ -38,38 +38,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 @Composable
-internal fun StartupScreenSettings(availableConsoles: List<MetaSystemID>) {
-    val context = LocalContext.current
-    val startupStore = remember { LibraryStartupStore(context) }
-    val selected by startupStore.observe().collectAsState(initial = startupStore.get())
-    var showPicker by remember { mutableStateOf(false) }
-
-    val destinations = remember(availableConsoles) { startupDestinations(availableConsoles) }
-
-    OmnidroidSettingsGroup(
-        titleRes = R.string.settings_section_startup,
-    ) {
-        OmnidroidSettingsMenuLink(
-            titleRes = R.string.settings_title_startup_destination,
-            subtitle = { Text(text = startupDestinationLabel(selected)) },
-            onClick = { showPicker = true },
-        )
-    }
-
-    if (!showPicker) return
-
-    StartupDestinationPickerDialog(
-        destinations = destinations,
-        selected = selected,
-        onSelected = { destination ->
-            startupStore.set(destination)
-            showPicker = false
-        },
-        onDismiss = { showPicker = false },
-    )
-}
-
-@Composable
 internal fun LibraryMaintenanceSettings(
     onNavigateSubscreen: (SettingsSubscreen) -> Unit,
 ) {

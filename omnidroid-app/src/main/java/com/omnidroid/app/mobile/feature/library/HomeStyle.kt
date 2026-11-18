@@ -145,12 +145,6 @@ internal val HomeRingSpace = HomeRingWidth + HomeRingOutset
 /** Height the landscape carousel keeps beside the card for title, meta line and buttons. */
 internal val HomeInfoMinHeight = 96.dp
 
-/**
- * Set by the Home layout around the console carousel, which then takes Home's look: 6 dp cards
- * with an accent ring, titles on the side cards, and Home's title, meta line and buttons.
- */
-internal val LocalHomeCarouselStyle = staticCompositionLocalOf { false }
-
 /** "NES · played 12 min. ago · 3h 40m": console, when it was last played and the total play time. */
 @Composable
 internal fun homeGameMeta(game: Game): String {
@@ -202,6 +196,9 @@ internal class CarouselActionFocus(val actions: FocusRequester, val carousel: Fo
 }
 
 internal val LocalCarouselActionFocus = staticCompositionLocalOf<CarouselActionFocus?> { null }
+
+/** The selected card's ring dims while a controller's focus is off the carousel (buttons, top bar). */
+internal fun CarouselActionFocus?.ringDimmed(): Boolean = this != null && controllerActive.value && !carouselFocused.value
 
 /** Wide Continue / Start pill, then round favourite and more-options buttons. */
 @Composable
@@ -344,7 +341,25 @@ internal fun Modifier.homeSelectionRing(
         )
     }
 
-/** Home's Row / Grid / List switch, sized to sit in the top bar beside search. */
+/**
+ * The view control for the top bar: the three-way switch when it fits beside search in [room],
+ * else one button that steps through the views (portrait, narrow 4:3 screens).
+ */
+@Composable
+internal fun HomeViewControl(
+    view: HomeView,
+    onViewChange: (HomeView) -> Unit,
+    portrait: Boolean,
+    room: Dp,
+) {
+    if (portrait || room < homeViewSwitchWidth()) {
+        HomeViewCycleButton(view = view, onViewChange = onViewChange)
+    } else {
+        HomeViewSwitch(view = view, onViewChange = onViewChange)
+    }
+}
+
+/** Home's Carousel / Grid / List switch, sized to sit in the top bar beside search. */
 /** Width of [HomeViewSwitch]: three segments plus its inset and gaps. */
 @Composable
 internal fun homeViewSwitchWidth(): Dp = chromeButtonSize() * 3.2f + 4.dp
@@ -413,14 +428,14 @@ internal fun HomeViewCycleButton(
 
 private fun HomeView.icon() =
     when (this) {
-        HomeView.ROW -> WireframeIcons.ViewRow
+        HomeView.CAROUSEL -> WireframeIcons.ViewCarousel
         HomeView.GRID -> WireframeIcons.ViewGrid
         HomeView.LIST -> WireframeIcons.ViewList
     }
 
 private fun HomeView.labelRes() =
     when (this) {
-        HomeView.ROW -> R.string.library_view_row
+        HomeView.CAROUSEL -> R.string.library_view_carousel
         HomeView.GRID -> R.string.library_view_grid
         HomeView.LIST -> R.string.library_view_list
     }
