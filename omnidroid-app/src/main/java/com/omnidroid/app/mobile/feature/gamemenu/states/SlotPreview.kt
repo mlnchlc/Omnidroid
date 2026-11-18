@@ -26,7 +26,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
-import com.omnidroid.app.mobile.shared.compose.ui.LibraryNeonGreen
+import com.omnidroid.app.mobile.shared.compose.ui.accentColor
 
 /** The save slot preview to show large beside the menu, set while a slot row has focus. */
 @Stable
@@ -43,9 +43,11 @@ val LocalSlotPreview = staticCompositionLocalOf<SlotPreviewState?> { null }
 @Composable
 fun BoxScope.SlotPreviewBeside(state: SlotPreviewState) {
     val current = state.bitmap
-    // Keep the last image while the preview fades out.
-    var shown by remember { mutableStateOf<Bitmap?>(null) }
-    if (current != null) shown = current
+    // Keep the last image while the preview fades out (a plain holder: no state write while
+    // composing).
+    val last = remember { LastBitmap() }
+    if (current != null) last.bitmap = current
+    val shown = current ?: last.bitmap
     AnimatedVisibility(
         visible = current != null,
         modifier = Modifier.align(Alignment.Center),
@@ -54,8 +56,9 @@ fun BoxScope.SlotPreviewBeside(state: SlotPreviewState) {
     ) {
         shown?.let { bitmap ->
             val shape = RoundedCornerShape(12.dp)
+            val image = remember(bitmap) { bitmap.asImageBitmap() }
             Image(
-                bitmap = bitmap.asImageBitmap(),
+                bitmap = image,
                 contentDescription = null,
                 contentScale = ContentScale.Fit,
                 modifier =
@@ -65,8 +68,12 @@ fun BoxScope.SlotPreviewBeside(state: SlotPreviewState) {
                         .padding(28.dp)
                         .aspectRatio(bitmap.width.coerceAtLeast(1) / bitmap.height.coerceAtLeast(1).toFloat())
                         .clip(shape)
-                        .border(2.dp, LibraryNeonGreen, shape),
+                        .border(2.dp, accentColor, shape),
             )
         }
     }
+}
+
+private class LastBitmap {
+    var bitmap: Bitmap? = null
 }

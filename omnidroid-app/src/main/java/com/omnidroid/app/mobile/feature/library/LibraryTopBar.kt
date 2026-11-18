@@ -1,6 +1,6 @@
 package com.omnidroid.app.mobile.feature.library
 
-import com.omnidroid.app.mobile.shared.compose.ui.libraryAccentColor
+import com.omnidroid.app.mobile.shared.compose.ui.accentColor
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
@@ -114,7 +114,6 @@ import com.omnidroid.app.mobile.shared.compose.ui.chromeIconSize
 import com.omnidroid.app.mobile.shared.compose.ui.chromeItemGap
 import com.omnidroid.app.mobile.shared.compose.ui.chromeTextStyle
 import com.omnidroid.app.mobile.shared.compose.ui.WireframeIcons
-import com.omnidroid.app.mobile.shared.compose.ui.accentColor
 import com.omnidroid.app.mobile.shared.compose.ui.LocalAdaptiveLayout
 import com.omnidroid.app.mobile.shared.compose.ui.chromeColors
 import com.omnidroid.app.mobile.shared.controller.LocalControllerNavigation
@@ -361,7 +360,7 @@ private fun LibraryUtilityButtons(
             Icon(
                 imageVector = WireframeIcons.Cast,
                 contentDescription = stringResource(R.string.displays_title),
-                tint = if (hasSecondaryOutput) libraryAccentColor else LocalContentColor.current,
+                tint = if (hasSecondaryOutput) accentColor else LocalContentColor.current,
                 modifier = Modifier.size(iconSize),
             )
         }
@@ -543,14 +542,14 @@ private fun LibrarySortMenuItem(
         text = {
             Text(
                 text = stringResource(option.labelRes()),
-                color = if (selected) libraryAccentColor else chromeColors.content,
+                color = if (selected) accentColor else chromeColors.content,
             )
         },
         leadingIcon = {
             Icon(
                 imageVector = option.icon(),
                 contentDescription = null,
-                tint = if (selected) libraryAccentColor else chromeColors.muted,
+                tint = if (selected) accentColor else chromeColors.muted,
                 modifier = Modifier.size(18.dp),
             )
         },
@@ -559,7 +558,7 @@ private fun LibrarySortMenuItem(
                 Icon(
                     imageVector = Icons.Filled.Check,
                     contentDescription = null,
-                    tint = libraryAccentColor,
+                    tint = accentColor,
                     modifier = Modifier.size(18.dp),
                 )
             }
@@ -621,7 +620,7 @@ internal fun LibrarySearchField(
         tonalElevation = 0.dp,
         border =
             if (active) {
-                BorderStroke(1.5.dp, libraryAccentColor)
+                BorderStroke(1.5.dp, accentColor)
             } else {
                 BorderStroke(1.dp, chromeColors.panelBorder)
             },

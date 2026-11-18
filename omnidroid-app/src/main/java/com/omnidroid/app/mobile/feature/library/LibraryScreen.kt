@@ -1,6 +1,11 @@
 package com.omnidroid.app.mobile.feature.library
 
-import com.omnidroid.app.mobile.shared.compose.ui.libraryAccentColor
+import com.omnidroid.app.mobile.shared.compose.ui.ChromeDivider
+import kotlinx.coroutines.flow.first
+import androidx.compose.runtime.withFrameNanos
+import androidx.compose.runtime.snapshotFlow
+import com.omnidroid.app.mobile.shared.compose.ui.rememberMinuteClock
+import com.omnidroid.app.mobile.shared.compose.ui.LocalMinuteClock
 import com.omnidroid.app.mobile.shared.compose.ui.accentColor
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.focus.FocusDirection
@@ -268,6 +273,8 @@ fun LibraryScreen(
         val edges = rememberContentEdges(contentEdge(portrait))
         // The carousel's Start button, which Down from the carousel goes to.
         val homeActionsRequester = remember { FocusRequester() }
+        val minuteClock = rememberMinuteClock()
+        CompositionLocalProvider(LocalMinuteClock provides minuteClock) {
         Column(
             modifier =
                 Modifier
@@ -312,6 +319,7 @@ fun LibraryScreen(
                 edges = edges,
                 onFilterSelected = { viewModel.selectFilter(it) },
             )
+        }
         }
     }
 }
@@ -480,11 +488,17 @@ internal fun HomeConsoleRow(
             else -> 1
         }
     val itemPx = with(LocalDensity.current) { buttonSize.roundToPx() }
+    var dockPlaced by remember { mutableStateOf(false) }
     LaunchedEffect(selectedItem, systems.size) {
-        // Keep the console that is showing in the middle of the dock (Favorites and All too).
+        // Keep the console that is showing in the middle of the dock (Favorites and All too). Wait
+        // for the first layout so the viewport is known; jump there on first show, then animate.
         if (selectedItem < 0) return@LaunchedEffect
-        val viewport = listState.layoutInfo.viewportSize.width
-        runCatching { listState.animateScrollToItem(selectedItem, -((viewport - itemPx) / 2).coerceAtLeast(0)) }
+        val viewport = snapshotFlow { listState.layoutInfo.viewportSize.width }.first { it > 0 }
+        val offset = -((viewport - itemPx) / 2).coerceAtLeast(0)
+        runCatching {
+            if (dockPlaced) listState.animateScrollToItem(selectedItem, offset) else listState.scrollToItem(selectedItem, offset)
+        }
+        dockPlaced = true
     }
     val labelText: @Composable (Modifier) -> Unit = { modifier ->
         Text(
@@ -534,7 +548,7 @@ internal fun HomeConsoleRow(
                 }
             }
             item(key = "divider") {
-                Box(Modifier.width(1.dp).height(28.dp * adaptiveSpec.uiScale).background(chromeColors.divider))
+                ChromeDivider(Modifier.height(28.dp * adaptiveSpec.uiScale), vertical = true)
             }
             items(systems, key = { it.name }) { system ->
                 Box {
@@ -611,12 +625,16 @@ private fun LibraryGames(
         state.filter is LibraryFilter.All &&
             state.searchQuery.isBlank() &&
             continueGame != null
-    // Keyed on "has games", not the count: switching console from the dock changes the count, and
-    // re-focusing the content then would pull a controller out of the dock after every step.
+    // Re-focus the content when it is rebuilt: a new view, or another console (L1/R1 rebuilds Grid
+    // and List, which drops the focused cell). The dock never holds focus, so this can't pull a
+    // controller out of it. If the first cell isn't laid out yet, try again a frame later.
     val hasContent = games.itemCount > 0 || showContinue
-    LaunchedEffect(requestInitialFocus, hasContent, state.homeView) {
+    LaunchedEffect(requestInitialFocus, hasContent, state.homeView, state.filter) {
         if (requestInitialFocus && hasContent) {
-            runCatching { firstItemRequester.requestFocus() }
+            if (!runCatching { firstItemRequester.requestFocus() }.getOrDefault(false)) {
+                withFrameNanos { }
+                runCatching { firstItemRequester.requestFocus() }
+            }
         }
     }
     val isRefreshing = games.loadState.refresh is LoadState.Loading

@@ -42,7 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.omnidroid.R
-import com.omnidroid.app.mobile.shared.compose.ui.LibraryNeonGreen
+import com.omnidroid.app.mobile.shared.compose.ui.accentColor
 import com.omnidroid.app.mobile.shared.compose.ui.chromeColors
 import com.omnidroid.app.mobile.shared.compose.ui.chromeContentColor
 import com.omnidroid.app.mobile.shared.compose.ui.chromeMutedContentColor
@@ -73,7 +73,7 @@ internal fun ProfileIdentity(
 ) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Box(
-            Modifier.size(if (compact) 48.dp else 64.dp).controllerFocusGlow(RoundedCornerShape(8.dp)).clickable(
+            Modifier.size(if (compact) 48.dp else 64.dp).controllerFocusGlow(CircleShape).clickable(
                 role = Role.Button,
                 onClickLabel = stringResource(R.string.profile_change_picture),
                 onClick = onEditPhoto,
@@ -96,7 +96,7 @@ internal fun ProfileIdentity(
                     Icon(
                         painterResource(R.drawable.ic_profile_robot),
                         contentDescription = null,
-                        tint = LibraryNeonGreen,
+                        tint = accentColor,
                         modifier = Modifier.size(if (compact) 28.dp else 36.dp),
                     )
                 }
@@ -184,7 +184,7 @@ internal fun ProfileProgress(state: ProfileViewModel.UiState) {
         LinearProgressIndicator(
             progress = { state.xpProgress.coerceIn(0f, 1f) },
             modifier = Modifier.fillMaxWidth().height(4.dp),
-            color = LibraryNeonGreen,
+            color = accentColor,
             trackColor = chromeColors.divider,
         )
         Text(
@@ -261,7 +261,7 @@ internal fun ProfileStreak(
                     Box(
                         Modifier.size(if (day == 7) 10.dp else 7.dp).clip(CircleShape).background(
                             if (day <= state.currentStreak) {
-                                if (day == 7) LibraryNeonGreen else StreakFire
+                                if (day == 7) accentColor else StreakFire
                             } else {
                                 chromeColors.divider
                             },

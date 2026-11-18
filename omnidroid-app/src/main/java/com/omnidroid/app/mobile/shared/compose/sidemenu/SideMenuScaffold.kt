@@ -1,5 +1,8 @@
 package com.omnidroid.app.mobile.shared.compose.sidemenu
 
+import com.omnidroid.app.mobile.shared.compose.ui.ChromeDivider
+import com.omnidroid.app.mobile.shared.compose.ui.RoundIconButton
+import androidx.compose.runtime.movableContentOf
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -89,12 +92,49 @@ fun SideMenuScaffold(
     }
     BackHandler { if (canGoBack) onBack() else state.closeThen() }
     val scrimAlpha by animateFloatAsState(
-        targetValue = if (transition.targetState) 0.58f else 0f,
+        targetValue = if (transition.targetState) ScrimAlpha else 0f,
         animationSpec = tween(if (transition.targetState) 280 else 220),
         label = "sideMenuScrim",
     )
     // Share the console selectors' neutral fill with every row in the panel.
     val panelColor = chromeColors.panel
+    // The panel's content moves between the portrait sheet and the side panel when the screen
+    // rotates; movable content keeps its state (scroll position, focused row) across the move.
+    val currentContent by rememberUpdatedState(content)
+    val currentTitle by rememberUpdatedState(title)
+    val currentCanGoBack by rememberUpdatedState(canGoBack)
+    val currentOnBack by rememberUpdatedState(onBack)
+    val currentHomeHeader by rememberUpdatedState(homeHeader)
+    val currentBottomReserved by rememberUpdatedState(bottomReserved)
+    val panelContent =
+        remember(state) {
+            movableContentOf { sheet: Boolean ->
+                Column(
+                    Modifier.fillMaxSize()
+                        .windowInsetsPadding(
+                            WindowInsets.safeDrawing.only(
+                                if (sheet) WindowInsetsSides.Horizontal else WindowInsetsSides.Top + WindowInsetsSides.End,
+                            ),
+                        )
+                        .padding(bottom = maxOf(currentBottomReserved, WindowInsets.safeDrawing.asPaddingValues().calculateBottomPadding())),
+                ) {
+                    if (!currentCanGoBack && currentHomeHeader != null) {
+                        currentHomeHeader!! { state.closeThen() }
+                    } else {
+                        SideMenuHeader(currentTitle, currentCanGoBack) { if (currentCanGoBack) currentOnBack() else state.closeThen() }
+                    }
+                    ChromeDivider()
+                    Box(Modifier.weight(1f).fillMaxWidth()) {
+                        CompositionLocalProvider(
+                            LocalSettingsRowContainerColor provides chromeColors.panel,
+                            LocalSideMenuIsSheet provides sheet,
+                        ) {
+                            currentContent()
+                        }
+                    }
+                }
+            }
+        }
     BoxWithConstraints(modifier.fillMaxSize()) {
         Box(
             Modifier.fillMaxSize().background(Color.Black.copy(alpha = scrimAlpha))
@@ -110,37 +150,11 @@ fun SideMenuScaffold(
                         .align(Alignment.CenterStart)
                         .fillMaxHeight()
                         .width(maxWidth - sideMenuWidth(maxWidth.value).dp)
-                        .graphicsLayer { alpha = (scrimAlpha / 0.58f).coerceIn(0f, 1f) },
+                        .graphicsLayer { alpha = (scrimAlpha / ScrimAlpha).coerceIn(0f, 1f) },
                 content = beside,
             )
         }
         val sheet = maxHeight > maxWidth
-        val panelContent: @Composable () -> Unit = {
-            Column(
-                Modifier.fillMaxSize()
-                    .windowInsetsPadding(
-                        WindowInsets.safeDrawing.only(
-                            if (sheet) WindowInsetsSides.Horizontal else WindowInsetsSides.Top + WindowInsetsSides.End,
-                        ),
-                    )
-                    .padding(bottom = maxOf(bottomReserved, WindowInsets.safeDrawing.asPaddingValues().calculateBottomPadding())),
-            ) {
-                if (!canGoBack && homeHeader != null) {
-                    homeHeader { state.closeThen() }
-                } else {
-                    SideMenuHeader(title, canGoBack) { if (canGoBack) onBack() else state.closeThen() }
-                }
-                Box(Modifier.fillMaxWidth().height(1.dp).background(chromeColors.divider))
-                Box(Modifier.weight(1f).fillMaxWidth()) {
-                    CompositionLocalProvider(
-                        LocalSettingsRowContainerColor provides panelColor,
-                        LocalSideMenuIsSheet provides sheet,
-                    ) {
-                        content()
-                    }
-                }
-            }
-        }
         if (sheet) {
             // Portrait: a bottom sheet over the on-screen controls, so the game stays visible above.
             AnimatedVisibility(
@@ -161,7 +175,7 @@ fun SideMenuScaffold(
                 ) {
                     Column(Modifier.fillMaxSize()) {
                         Box(Modifier.fillMaxWidth().height(3.dp).background(chromeColors.gameMenuAccent))
-                        Box(Modifier.weight(1f).fillMaxWidth()) { panelContent() }
+                        Box(Modifier.weight(1f).fillMaxWidth()) { panelContent(sheet) }
                     }
                 }
             }
@@ -182,7 +196,7 @@ fun SideMenuScaffold(
                 ) {
                     Row(Modifier.fillMaxSize()) {
                         Box(Modifier.width(3.dp).fillMaxHeight().background(chromeColors.gameMenuAccent))
-                        Box(Modifier.weight(1f).fillMaxHeight()) { panelContent() }
+                        Box(Modifier.weight(1f).fillMaxHeight()) { panelContent(sheet) }
                     }
                 }
             }
@@ -220,14 +234,8 @@ fun SideMenuRoundButton(
     onClick: () -> Unit,
     content: @Composable () -> Unit,
 ) {
-    Surface(
-        onClick = onClick,
-        modifier = Modifier.size(44.dp).controllerFocusGlow(CircleShape),
-        shape = CircleShape,
-        color = Color.Transparent,
-        contentColor = chromeContentColor,
-        border = BorderStroke(1.dp, chromeColors.panelBorder),
-    ) {
-        Box(contentAlignment = Alignment.Center) { content() }
-    }
+    RoundIconButton(onClick = onClick, size = 44.dp, fill = Color.Transparent, bordered = true, content = content)
 }
+
+/** How dark the scrim behind the menu gets. */
+private const val ScrimAlpha = 0.58f

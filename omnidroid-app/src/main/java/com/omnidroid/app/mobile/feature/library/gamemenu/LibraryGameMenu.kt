@@ -74,7 +74,7 @@ import com.omnidroid.app.mobile.shared.compose.sidemenu.SideMenuScaffold
 import com.omnidroid.app.mobile.shared.compose.sidemenu.openMenuPage
 import com.omnidroid.app.mobile.shared.compose.sidemenu.rememberSideMenuState
 import com.omnidroid.app.mobile.shared.compose.sidemenu.validateSideMenuDestinations
-import com.omnidroid.app.mobile.shared.compose.ui.LibraryNeonGreen
+import com.omnidroid.app.mobile.shared.compose.ui.accentColor
 import com.omnidroid.app.mobile.shared.compose.ui.OmnidroidSmallGameImage
 import com.omnidroid.app.mobile.shared.compose.ui.chromeColors
 import com.omnidroid.app.mobile.shared.controller.ControllerHintBar
@@ -238,11 +238,12 @@ private fun LibraryGameMenuRoot(
                     { Icon(Icons.Default.PlayArrow, contentDescription = null) }, highlighted = true, onClick = onPlay),
                 MenuTile("restart", stringResource(R.string.game_context_menu_restart),
                     { MenuDrawableIcon(R.drawable.ic_menu_restart) }, onClick = onRestart),
-                MenuTile("favorite", stringResource(R.string.favorites), {
+                // The label says what pressing does; the heart only shows the state.
+                MenuTile("favorite", favoriteLabel, {
                     Icon(
                         if (game.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                        contentDescription = favoriteLabel,
-                        tint = if (game.isFavorite) LibraryNeonGreen else LocalContentColor.current,
+                        contentDescription = null,
+                        tint = if (game.isFavorite) accentColor else LocalContentColor.current,
                     )
                 }) { actions.favorite(game, !game.isFavorite) },
             ),

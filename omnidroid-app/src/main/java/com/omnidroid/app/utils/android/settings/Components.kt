@@ -1,5 +1,6 @@
 package com.omnidroid.app.utils.android.settings
 
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.material3.Icon
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Check
@@ -483,10 +484,11 @@ fun OmnidroidSettingsColorChoice(
 fun SettingsRowEnd(
     text: String?,
     chevron: Boolean = true,
+    style: TextStyle = MaterialTheme.typography.bodyMedium,
 ) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(end = 8.dp)) {
         if (text != null) {
-            Text(text, style = MaterialTheme.typography.bodyMedium, color = chromeColors.muted, maxLines = 1)
+            Text(text, style = style, color = chromeColors.muted, maxLines = 1)
         }
         if (chevron) {
             Icon(
