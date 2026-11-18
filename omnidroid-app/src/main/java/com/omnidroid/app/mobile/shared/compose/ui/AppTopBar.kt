@@ -14,6 +14,7 @@ import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -49,6 +50,9 @@ import com.omnidroid.app.mobile.feature.library.NotchOrientation
 import com.omnidroid.app.mobile.feature.library.SyncProgressNotch
 import com.omnidroid.lib.core.SyncProgress
 
+/** Top bar width below which the status read-outs give way to the controls. */
+private val StatusMinBarWidth = 700.dp
+
 /** Shared app chrome. Screens can supply controls without changing its styling. */
 @Composable
 fun AppTopBar(
@@ -76,15 +80,15 @@ fun AppTopBar(
     // spacing as the content underneath so their edges line up.
     val topInset = cutoutTopInset()
     val edges = rememberContentEdges(contentEdge(portrait))
-    // On narrow landscape screens (small 4:3 handhelds) the read-outs would crowd search and
-    // the buttons, so they make way while the controls are up.
-    val statusFits = !controlsVisible || trailingContent == null || LocalConfiguration.current.screenWidthDp >= 700
-    val status = showStatus && statusFits
     val syncAlignment = if (portrait) Alignment.Top else Alignment.Bottom
     val syncOrigin = TransformOrigin(0.5f, if (portrait) 0f else 1f)
 
     CompositionLocalProvider(LocalContentColor provides chromeContentColor) {
-        Box(modifier = modifier.fillMaxSize()) {
+        BoxWithConstraints(modifier = modifier.fillMaxSize()) {
+            // On narrow bars (small 4:3 handhelds, or a large UI scale) the read-outs would crowd
+            // search and the buttons, so they make way while the controls are up.
+            val statusFits = !controlsVisible || trailingContent == null || maxWidth >= StatusMinBarWidth * spec.uiScale
+            val status = showStatus && statusFits
             // The fade is part of the chrome, independent of control visibility and clipping.
             Box(
                 modifier =
@@ -146,7 +150,7 @@ fun AppTopBar(
                             if (status) {
                                 // Separates the status read-outs from the buttons.
                                 Spacer(modifier = Modifier.width(chromeItemGap()))
-                                Box(Modifier.width(1.dp).height(chromeButtonSize() * 0.55f).background(chromeColors.divider))
+                                ChromeDivider(Modifier.height(chromeButtonSize() * 0.55f), vertical = true)
                                 Spacer(modifier = Modifier.width(chromeItemGap()))
                             } else {
                                 Spacer(modifier = Modifier.width(6.dp))

@@ -54,13 +54,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.omnidroid.R
-import com.omnidroid.app.mobile.shared.compose.ui.LibraryNeonGreen
+import com.omnidroid.app.mobile.shared.compose.ui.accentColor
+import com.omnidroid.app.mobile.shared.compose.ui.selectionColors
+import com.omnidroid.app.mobile.shared.compose.ui.ChromeDivider
+import com.omnidroid.app.mobile.shared.compose.ui.RailScaffold
+import androidx.compose.foundation.layout.heightIn
 import com.omnidroid.app.mobile.shared.compose.ui.chromeContentColor
 import com.omnidroid.app.mobile.shared.compose.ui.chromeMutedContentColor
 import com.omnidroid.app.mobile.shared.compose.ui.homeChromeBackground
 import com.omnidroid.app.mobile.shared.controller.controllerFocusGlow
-
-private val SettingsSidebarWidth = 220.dp
 
 @Composable
 internal fun SettingsBackHeader(
@@ -89,7 +91,7 @@ internal fun SettingsBackHeader(
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = stringResource(R.string.back),
-                tint = LibraryNeonGreen,
+                tint = accentColor,
                 modifier = Modifier.size(20.dp),
             )
             Text(
@@ -116,7 +118,7 @@ private fun SettingsSection.icon(): ImageVector =
 
 /**
  * One section entry, shared by the landscape rail and the portrait chips so both read the same:
- * icon and label, the current section on a filled light pill with dark content.
+ * icon and label, the current section filled with the accent.
  */
 @Composable
 private fun SettingsSectionItem(
@@ -128,35 +130,36 @@ private fun SettingsSectionItem(
     modifier: Modifier = Modifier,
     outlined: Boolean = false,
 ) {
+    val colors = selectionColors(selected)
     Surface(
         onClick = { onActivate(item) },
         modifier =
             modifier
-                .height(40.dp)
+                .heightIn(min = 40.dp)
                 .focusRequester(focusRequester)
                 .onFocusChanged { if (it.isFocused) onFocused(item) }
-                .controllerFocusGlow(CircleShape),
+                .controllerFocusGlow(CircleShape, onFill = selected),
         shape = CircleShape,
-        color = if (selected) chromeContentColor else Color.Transparent,
-        contentColor = if (selected) chromeColors.panel else chromeContentColor,
+        color = colors.container,
+        contentColor = colors.content,
         border = if (outlined && !selected) BorderStroke(1.dp, chromeColors.panelBorder) else null,
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 14.dp),
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Icon(
                 imageVector = item.icon(),
                 contentDescription = null,
-                tint = if (selected) chromeColors.panel else chromeMutedContentColor,
+                tint = if (selected) colors.content else chromeMutedContentColor,
                 modifier = Modifier.size(18.dp),
             )
             Text(
                 text = stringResource(item.titleId),
                 style = MaterialTheme.typography.labelLarge.copy(fontSize = 15.sp),
                 fontWeight = FontWeight.SemiBold,
-                color = if (selected) chromeColors.panel else chromeContentColor,
+                color = colors.content,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -176,8 +179,15 @@ internal fun SettingsTopMenu(
 ) {
     val listState = rememberLazyListState()
     LaunchedEffect(selected) {
+        // Bring the chip into view only when it isn't fully visible already, so the row doesn't
+        // jump every time a section is picked.
         val index = SettingsSection.values().indexOf(selected)
-        if (index >= 0) listState.animateScrollToItem(index)
+        if (index < 0) return@LaunchedEffect
+        val info = listState.layoutInfo
+        val item = info.visibleItemsInfo.firstOrNull { it.index == index }
+        val fullyVisible =
+            item != null && item.offset >= info.viewportStartOffset && item.offset + item.size <= info.viewportEndOffset
+        if (!fullyVisible) listState.animateScrollToItem(index)
     }
     Column(modifier = modifier.fillMaxWidth()) {
         LazyRow(
@@ -198,11 +208,11 @@ internal fun SettingsTopMenu(
                 )
             }
         }
-        Box(Modifier.fillMaxWidth().height(1.dp).background(chromeColors.divider))
+        ChromeDivider()
     }
 }
 
-/** Landscape: the sections as a rail, separated from the content by a divider. */
+/** Landscape: the sections as a rail (the divider beside it comes from [RailScaffold]). */
 @Composable
 internal fun SettingsSidebar(
     modifier: Modifier = Modifier,
@@ -211,29 +221,24 @@ internal fun SettingsSidebar(
     onFocused: (SettingsSection) -> Unit,
     onActivate: (SettingsSection) -> Unit,
 ) {
-    Row(modifier = modifier.fillMaxHeight()) {
-        Column(
-            modifier =
-                Modifier
-                    .width(SettingsSidebarWidth)
-                    .fillMaxHeight()
-                    .enterOnSelected(selected, focusRequesters)
-                    .verticalScroll(rememberScrollState())
-                    .padding(end = 12.dp, top = 10.dp, bottom = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            SettingsSection.values().forEach { item ->
-                SettingsSectionItem(
-                    item = item,
-                    selected = item == selected,
-                    focusRequester = focusRequesters.getValue(item),
-                    onFocused = onFocused,
-                    onActivate = onActivate,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
+    Column(
+        modifier =
+            modifier
+                .enterOnSelected(selected, focusRequesters)
+                .verticalScroll(rememberScrollState())
+                .padding(end = 12.dp, top = 10.dp, bottom = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        SettingsSection.values().forEach { item ->
+            SettingsSectionItem(
+                item = item,
+                selected = item == selected,
+                focusRequester = focusRequesters.getValue(item),
+                onFocused = onFocused,
+                onActivate = onActivate,
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
-        Box(Modifier.width(1.dp).fillMaxHeight().background(chromeColors.divider))
     }
 }
 

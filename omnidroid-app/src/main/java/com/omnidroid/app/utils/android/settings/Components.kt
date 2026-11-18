@@ -1,5 +1,13 @@
 package com.omnidroid.app.utils.android.settings
 
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.Icons
+import androidx.compose.ui.graphics.toArgb
+import com.omnidroid.app.mobile.shared.compose.ui.AccentContrast
+import com.omnidroid.app.mobile.shared.compose.ui.SegmentedPills
+import com.omnidroid.app.mobile.shared.compose.ui.ChromeShapes
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -145,6 +153,9 @@ fun OmnidroidSettingsMenuLink(
     }
 }
 
+/** Side inset of a settings group card; layouts that line up with the card edge use it. */
+val SettingsCardInset = 16.dp
+
 @Composable
 fun OmnidroidSettingsGroup(
     modifier: Modifier = Modifier,
@@ -153,7 +164,7 @@ fun OmnidroidSettingsGroup(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     if (LocalSettingsGroupsAsCards.current) {
-        Column(modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp)) {
+        Column(modifier = modifier.fillMaxWidth().padding(horizontal = SettingsCardInset, vertical = 6.dp)) {
             if (title != null) {
                 Box(Modifier.padding(start = 4.dp, top = 8.dp, bottom = 6.dp)) {
                     ProvideTextStyle(
@@ -167,7 +178,7 @@ fun OmnidroidSettingsGroup(
                     }
                 }
             }
-            val shape = RoundedCornerShape(12.dp)
+            val shape = ChromeShapes.Card
             Surface(
                 shape = shape,
                 color = chromeColors.panel,
@@ -365,34 +376,18 @@ fun OmnidroidSettingsSegmented(
         }
     }
     val segments: @Composable () -> Unit = {
-        Row(
-            modifier =
-                Modifier
-                    .border(BorderStroke(1.dp, chromeColors.panelBorder), CircleShape)
-                    .padding(3.dp)
-                    .selectableGroup(),
-            horizontalArrangement = Arrangement.spacedBy(2.dp),
-        ) {
-            items.forEachIndexed { index, item ->
-                val selected = index == state.value
-                Box(
-                    modifier =
-                        Modifier
-                            .height(32.dp)
-                            .controllerFocusGlow(CircleShape)
-                            .background(if (selected) chromeColors.content else Color.Transparent, CircleShape)
-                            .selectable(selected = selected, enabled = enabled, role = Role.RadioButton) { state.value = index }
-                            .padding(horizontal = 14.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        item,
-                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
-                        color = if (selected) chromeColors.panel else chromeColors.content,
-                        maxLines = 1,
-                    )
-                }
-            }
+        SegmentedPills(
+            options = items.indices.toList(),
+            selected = state.value,
+            onSelect = { state.value = it },
+            enabled = enabled,
+        ) { index, colors ->
+            Text(
+                items[index],
+                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+                color = colors.content,
+                maxLines = 1,
+            )
         }
     }
     BoxWithConstraints(
@@ -452,19 +447,54 @@ fun OmnidroidSettingsColorChoice(
         ) {
             colors.forEachIndexed { index, color ->
                 val selected = index == selectedIndex
+                // The whole 40 dp circle is the target. Chosen: a check in the swatch's own
+                // contrasting colour. Controller focus: the accent ring around it.
                 Box(
                     modifier =
                         Modifier
                             .size(40.dp)
                             .controllerFocusGlow(CircleShape)
-                            .border(BorderStroke(2.dp, if (selected) chromeColors.content else Color.Transparent), CircleShape)
+                            .selectable(selected = selected, role = Role.RadioButton) { onSelect(index) }
+                            .semantics { contentDescription = labels[index] }
                             .padding(5.dp)
                             .background(color, CircleShape)
-                            .border(BorderStroke(1.dp, chromeColors.panelBorder), CircleShape)
-                            .selectable(selected = selected, role = Role.RadioButton) { onSelect(index) }
-                            .semantics { contentDescription = labels[index] },
-                )
+                            .border(BorderStroke(1.dp, chromeColors.panelBorder), CircleShape),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    if (selected) {
+                        Icon(
+                            Icons.Filled.Check,
+                            contentDescription = null,
+                            tint = Color(AccentContrast.onColor(color.toArgb())),
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+                }
             }
+        }
+    }
+}
+
+/**
+ * The end of a settings or menu row: the current value in muted text, then a chevron that mirrors
+ * in right-to-left layouts. Screen readers read the value only.
+ */
+@Composable
+fun SettingsRowEnd(
+    text: String?,
+    chevron: Boolean = true,
+) {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(end = 8.dp)) {
+        if (text != null) {
+            Text(text, style = MaterialTheme.typography.bodyMedium, color = chromeColors.muted, maxLines = 1)
+        }
+        if (chevron) {
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = chromeColors.muted,
+                modifier = Modifier.padding(start = 4.dp).size(20.dp),
+            )
         }
     }
 }

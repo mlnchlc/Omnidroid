@@ -18,6 +18,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import com.omnidroid.R
 import com.omnidroid.app.utils.android.settings.stringPreferenceState
@@ -126,6 +127,11 @@ enum class AccentPreset(val key: String, val dark: Color, val light: Color) {
     WHITE("white", Color(0xFFF2F2F2), Color(0xFF1A1A1A)),
     ;
 
+    fun color(dark: Boolean): Color = if (dark) this.dark else light
+
+    /** Text and icons on a fill of this accent: black or white, whichever has more contrast. */
+    fun onAccent(dark: Boolean): Color = Color(AccentContrast.onColor(color(dark).toArgb()))
+
     companion object {
         fun fromKey(key: String?): AccentPreset = entries.firstOrNull { it.key == key } ?: GREEN
     }
@@ -133,11 +139,19 @@ enum class AccentPreset(val key: String, val dark: Color, val light: Color) {
 
 val LocalAccentColor = staticCompositionLocalOf { LibraryNeonGreen }
 
+val LocalOnAccentColor = staticCompositionLocalOf { Color.Black }
+
 /** The user's accent (Display > Accent color), for highlights: focus and selection. */
 val accentColor: Color
     @Composable
     @ReadOnlyComposable
     get() = LocalAccentColor.current
+
+/** Text and icons on an [accentColor] fill (selected items, the Start pill). */
+val onAccentColor: Color
+    @Composable
+    @ReadOnlyComposable
+    get() = LocalOnAccentColor.current
 
 /** Text and icons on a [LibraryNeonGreen] fill: near-black reads at ~7:1, white only ~2.8:1. */
 val OnLibraryNeonGreen = Color(0xFF0A0A0A)
@@ -263,7 +277,7 @@ fun AppTheme(
     val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
     val accentPreference = stringPreferenceState(R.string.pref_key_accent_color, AccentPreset.GREEN.key)
     val accentPreset = AccentPreset.fromKey(accentPreference.value)
-    val accent = if (darkTheme) accentPreset.dark else accentPreset.light
+    val accent = accentPreset.color(darkTheme)
     val baseChrome = if (darkTheme) DarkChromeColors else LightChromeColors
     // The game menu's highlighted tile and sheet line follow the accent too (green keeps its tone).
     val chrome = if (accentPreset == AccentPreset.GREEN) baseChrome else baseChrome.copy(gameMenuAccent = accent)
@@ -290,6 +304,7 @@ fun AppTheme(
         LocalAppDarkTheme provides darkTheme,
         LocalChromeColors provides chrome,
         LocalAccentColor provides accent,
+        LocalOnAccentColor provides accentPreset.onAccent(darkTheme),
     ) {
         MaterialTheme(colorScheme = colorScheme) {
             content()
